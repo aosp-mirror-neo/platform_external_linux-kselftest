@@ -411,6 +411,8 @@ static inline uint64_t uffd_minor_feature(void)
 
 /* b/308714445
  * _UFFDIO_POISON unsupported in kernel <6.6
+ * b/335674702
+ * _UFFDIO_MOVE unupported in kernel <6.8
  */
 static uint32_t get_kernel_version(void)
 {
@@ -443,6 +445,10 @@ static uint64_t get_expected_ioctls(uint64_t mode)
 	if (kernel_version < KERNEL_VERSION(6, 6, 0)) {
 		// UFFDIO_POISON not supported until kernel 6.6.
 		ioctls &= ~(1 << _UFFDIO_POISON);
+	}
+	if (kernel_version < KERNEL_VERSION(6, 8, 0)) {
+		// UFFDIO_MOVE not supported until kernel 6.8.
+		ioctls &= ~(1 << _UFFDIO_MOVE);
 	}
 
 	return ioctls;
