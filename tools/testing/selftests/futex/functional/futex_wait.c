@@ -97,9 +97,9 @@ int main(int argc, char *argv[])
 	shm_id = shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0666);
 	if (shm_id < 0) {
 		if (errno == ENOSYS) {
-			ksft_test_result_skip("shmget returned: %d %s",
+			ksft_test_result_skip("shmget returned: %d %s\n",
 					      errno, strerror(errno));
-			exit(KSFT_SKIP);
+			goto skip_anon_page_shared_memory_test;
 		}
 		perror("shmget");
 		exit(1);
@@ -126,6 +126,7 @@ int main(int argc, char *argv[])
 		ksft_test_result_pass("futex_wake shared (page anon) succeeds\n");
 	}
 
+skip_anon_page_shared_memory_test:
 
 	/* Testing a file backed shared memory */
 	fd = open(SHM_PATH, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
