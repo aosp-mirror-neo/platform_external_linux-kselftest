@@ -2090,6 +2090,7 @@ cc_test {
     cflags: [
         "-O2",
         "-pthread",
+        "-fomit-frame-pointer",
     ],
     c_std: "gnu99",
     defaults: ["kselftest_template_defaults"],
