@@ -146,7 +146,7 @@ int main(int argc, char **argv)
 			continue;
 
 		length = 10;
-		while (length <= (NSEC_PER_SEC * 10)) {
+		while (length <= ((long long) NSEC_PER_SEC * 10)) {
 			ret = nanosleep_lat_test(clockid, length);
 			if (ret)
 				break;
