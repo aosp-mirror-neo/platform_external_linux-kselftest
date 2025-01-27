@@ -147,8 +147,21 @@ Updating Kselftest
 
 To merge in a new upstream version of kselftest:
 1. Do a git merge of the upstream tag with the "ours" policy, dropping all upstream changes. Do not commit yet.
+```
+git remote add upstream-stable git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
+git merge v6.13 -s ours
+```
 2. Delete tools/testing/selftests and replace it with a copy from the upstream kernel at the same tag as used above.
+```
+rm -rf tools/testing/selftests
+git checkout v6.13 -- tools/testing/selftests
+git checkout v6.13 -- include/vdso/time64.h
+git checkout v6.13 -- mm/gup_test.h
+```
 3. Apply the patches in android/patches/, resolving conflicts as required.
+```
+git am android/patches/*
+```
 4. Test on all supported kernel versions, ensuring that any tests currently enabled in VTS do not generate new failures.
 5. Commit the merge.
 

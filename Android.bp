@@ -68,19 +68,20 @@ sh_test {
         "vts"
     ],
     data: [
-        ":kselftest_binderfs_tests_binderfs_test",
+        ":kselftest_binderfs_binderfs_test",
+        ":kselftest_breakpoints_breakpoint_test",
         ":kselftest_capabilities_test_execve",
         ":kselftest_capabilities_validate_cap",
-        ":kselftest_futex_tests_futex_requeue_pi_mismatched_ops",
-        ":kselftest_futex_tests_futex_requeue_pi_signal_restart",
-        ":kselftest_futex_tests_futex_requeue_pi",
-        ":kselftest_futex_tests_futex_requeue",
-        ":kselftest_futex_tests_futex_wait_private_mapped_file",
-        ":kselftest_futex_tests_futex_wait_timeout",
-        ":kselftest_futex_tests_futex_wait_uninitialized_heap",
-        ":kselftest_futex_tests_futex_wait_wouldblock",
-        ":kselftest_futex_tests_futex_wait",
-        ":kselftest_futex_tests_futex_waitv",
+        ":kselftest_futex_futex_requeue_pi_mismatched_ops",
+        ":kselftest_futex_futex_requeue_pi_signal_restart",
+        ":kselftest_futex_futex_requeue_pi",
+        ":kselftest_futex_futex_requeue",
+        ":kselftest_futex_futex_wait_private_mapped_file",
+        ":kselftest_futex_futex_wait_timeout",
+        ":kselftest_futex_futex_wait_uninitialized_heap",
+        ":kselftest_futex_futex_wait_wouldblock",
+        ":kselftest_futex_futex_wait",
+        ":kselftest_futex_futex_waitv",
         ":kselftest_futex_functional_run.sh",
         ":kselftest_kcmp_tests_kcmp_test",
         ":kselftest_net_tests_socket",
@@ -104,20 +105,19 @@ sh_test {
         ":kselftest_timer_tests_set-timer-lat",
         ":kselftest_timer_tests_threadtest",
         ":kselftest_timer_tests_valid-adjtimex",
-        ":kselftest_vm_tests_compaction_test",
-        ":kselftest_vm_tests_hugepage-mmap",
-        ":kselftest_vm_tests_hugepage-shm",
-        ":kselftest_vm_tests_map_hugetlb",
-        ":kselftest_vm_tests_mlock-random-test",
-        ":kselftest_vm_tests_mlock2-tests",
-        ":kselftest_vm_tests_on-fault-limit",
-        ":kselftest_vm_tests_mremap_dontunmap",
-        ":kselftest_vm_tests_mremap_test",
-        ":kselftest_vm_tests_userfaultfd",
-        ":kselftest_vm_tests_thuge-gen",
-        ":kselftest_vm_tests_transhuge-stress",
-        ":kselftest_vm_run_vmtests",
-        ":kselftest_breakpoints_breakpoint_test",
+        ":kselftest_mm_compaction_test",
+        ":kselftest_mm_hugepage_mmap",
+        ":kselftest_mm_hugepage_shm",
+        ":kselftest_mm_map_hugetlb",
+        ":kselftest_mm_mlock_random_test",
+        ":kselftest_mm_mlock2_tests",
+        ":kselftest_mm_on_fault_limit",
+        ":kselftest_mm_mremap_dontunmap",
+        ":kselftest_mm_mremap_test",
+        ":kselftest_mm_uffd_unit_tests",
+        ":kselftest_mm_thuge_gen",
+        ":kselftest_mm_transhuge_stress",
+        ":kselftest_mm_run_vmtests",
         ":kselftest_kvm_arm64_tests_pvm_wipe_mem",
         ":kselftest_vdso_test_abi",
         ":kselftest_vdso_test_clock_getres",
@@ -141,19 +141,19 @@ sh_test {
         "vts"
     ],
     data: [
-        ":kselftest_binderfs_tests_binderfs_test",
+        ":kselftest_binderfs_binderfs_test",
         ":kselftest_capabilities_test_execve",
         ":kselftest_capabilities_validate_cap",
-        ":kselftest_futex_tests_futex_requeue_pi_mismatched_ops",
-        ":kselftest_futex_tests_futex_requeue_pi_signal_restart",
-        ":kselftest_futex_tests_futex_requeue_pi",
-        ":kselftest_futex_tests_futex_requeue",
-        ":kselftest_futex_tests_futex_wait_private_mapped_file",
-        ":kselftest_futex_tests_futex_wait_timeout",
-        ":kselftest_futex_tests_futex_wait_uninitialized_heap",
-        ":kselftest_futex_tests_futex_wait_wouldblock",
-        ":kselftest_futex_tests_futex_wait",
-        ":kselftest_futex_tests_futex_waitv",
+        ":kselftest_futex_futex_requeue_pi_mismatched_ops",
+        ":kselftest_futex_futex_requeue_pi_signal_restart",
+        ":kselftest_futex_futex_requeue_pi",
+        ":kselftest_futex_futex_requeue",
+        ":kselftest_futex_futex_wait_private_mapped_file",
+        ":kselftest_futex_futex_wait_timeout",
+        ":kselftest_futex_futex_wait_uninitialized_heap",
+        ":kselftest_futex_futex_wait_wouldblock",
+        ":kselftest_futex_futex_wait",
+        ":kselftest_futex_futex_waitv",
         ":kselftest_futex_functional_run.sh",
         ":kselftest_kcmp_tests_kcmp_test",
         ":kselftest_net_tests_socket",
@@ -177,19 +177,19 @@ sh_test {
         ":kselftest_timer_tests_set-timer-lat",
         ":kselftest_timer_tests_threadtest",
         ":kselftest_timer_tests_valid-adjtimex",
-        ":kselftest_vm_tests_compaction_test",
-        ":kselftest_vm_tests_hugepage-mmap",
-        ":kselftest_vm_tests_hugepage-shm",
-        ":kselftest_vm_tests_map_hugetlb",
-        ":kselftest_vm_tests_mlock-random-test",
-        ":kselftest_vm_tests_mlock2-tests",
-        ":kselftest_vm_tests_on-fault-limit",
-        ":kselftest_vm_tests_mremap_dontunmap",
-        ":kselftest_vm_tests_mremap_test",
-        ":kselftest_vm_tests_userfaultfd",
-        ":kselftest_vm_tests_thuge-gen",
-        ":kselftest_vm_tests_transhuge-stress",
-        ":kselftest_vm_run_vmtests",
+        ":kselftest_mm_compaction_test",
+        ":kselftest_mm_hugepage_mmap",
+        ":kselftest_mm_hugepage_shm",
+        ":kselftest_mm_map_hugetlb",
+        ":kselftest_mm_mlock_random_test",
+        ":kselftest_mm_mlock2_tests",
+        ":kselftest_mm_on_fault_limit",
+        ":kselftest_mm_mremap_dontunmap",
+        ":kselftest_mm_mremap_test",
+        ":kselftest_mm_uffd_unit_tests",
+        ":kselftest_mm_thuge_gen",
+        ":kselftest_mm_transhuge_stress",
+        ":kselftest_mm_run_vmtests",
     ],
     compile_multilib: "32",
     enabled: false,
@@ -212,19 +212,19 @@ sh_test {
         "vts"
     ],
     data: [
-        ":kselftest_binderfs_tests_binderfs_test",
+        ":kselftest_binderfs_binderfs_test",
         ":kselftest_capabilities_test_execve",
         ":kselftest_capabilities_validate_cap",
-        ":kselftest_futex_tests_futex_requeue_pi_mismatched_ops",
-        ":kselftest_futex_tests_futex_requeue_pi_signal_restart",
-        ":kselftest_futex_tests_futex_requeue_pi",
-        ":kselftest_futex_tests_futex_requeue",
-        ":kselftest_futex_tests_futex_wait_private_mapped_file",
-        ":kselftest_futex_tests_futex_wait_timeout",
-        ":kselftest_futex_tests_futex_wait_uninitialized_heap",
-        ":kselftest_futex_tests_futex_wait_wouldblock",
-        ":kselftest_futex_tests_futex_wait",
-        ":kselftest_futex_tests_futex_waitv",
+        ":kselftest_futex_futex_requeue_pi_mismatched_ops",
+        ":kselftest_futex_futex_requeue_pi_signal_restart",
+        ":kselftest_futex_futex_requeue_pi",
+        ":kselftest_futex_futex_requeue",
+        ":kselftest_futex_futex_wait_private_mapped_file",
+        ":kselftest_futex_futex_wait_timeout",
+        ":kselftest_futex_futex_wait_uninitialized_heap",
+        ":kselftest_futex_futex_wait_wouldblock",
+        ":kselftest_futex_futex_wait",
+        ":kselftest_futex_futex_waitv",
         ":kselftest_futex_functional_run.sh",
         ":kselftest_kcmp_tests_kcmp_test",
         ":kselftest_net_tests_socket",
@@ -248,19 +248,19 @@ sh_test {
         ":kselftest_timer_tests_set-timer-lat",
         ":kselftest_timer_tests_threadtest",
         ":kselftest_timer_tests_valid-adjtimex",
-        ":kselftest_vm_tests_compaction_test",
-        ":kselftest_vm_tests_hugepage-mmap",
-        ":kselftest_vm_tests_hugepage-shm",
-        ":kselftest_vm_tests_map_hugetlb",
-        ":kselftest_vm_tests_mlock-random-test",
-        ":kselftest_vm_tests_mlock2-tests",
-        ":kselftest_vm_tests_on-fault-limit",
-        ":kselftest_vm_tests_mremap_dontunmap",
-        ":kselftest_vm_tests_mremap_test",
-        ":kselftest_vm_tests_userfaultfd",
-        ":kselftest_vm_tests_thuge-gen",
-        ":kselftest_vm_tests_transhuge-stress",
-        ":kselftest_vm_run_vmtests",
+        ":kselftest_mm_compaction_test",
+        ":kselftest_mm_hugepage_mmap",
+        ":kselftest_mm_hugepage_shm",
+        ":kselftest_mm_map_hugetlb",
+        ":kselftest_mm_mlock_random_test",
+        ":kselftest_mm_mlock2_tests",
+        ":kselftest_mm_on_fault_limit",
+        ":kselftest_mm_mremap_dontunmap",
+        ":kselftest_mm_mremap_test",
+        ":kselftest_mm_uffd_unit_tests",
+        ":kselftest_mm_thuge_gen",
+        ":kselftest_mm_transhuge_stress",
+        ":kselftest_mm_run_vmtests",
         ":kselftest_vdso_test_abi",
         ":kselftest_vdso_test_clock_getres",
         ":kselftest_vdso_test_getcpu",
@@ -289,19 +289,19 @@ sh_test {
         "vts"
     ],
     data: [
-        ":kselftest_binderfs_tests_binderfs_test",
+        ":kselftest_binderfs_binderfs_test",
         ":kselftest_capabilities_test_execve",
         ":kselftest_capabilities_validate_cap",
-        ":kselftest_futex_tests_futex_requeue_pi_mismatched_ops",
-        ":kselftest_futex_tests_futex_requeue_pi_signal_restart",
-        ":kselftest_futex_tests_futex_requeue_pi",
-        ":kselftest_futex_tests_futex_requeue",
-        ":kselftest_futex_tests_futex_wait_private_mapped_file",
-        ":kselftest_futex_tests_futex_wait_timeout",
-        ":kselftest_futex_tests_futex_wait_uninitialized_heap",
-        ":kselftest_futex_tests_futex_wait_wouldblock",
-        ":kselftest_futex_tests_futex_wait",
-        ":kselftest_futex_tests_futex_waitv",
+        ":kselftest_futex_futex_requeue_pi_mismatched_ops",
+        ":kselftest_futex_futex_requeue_pi_signal_restart",
+        ":kselftest_futex_futex_requeue_pi",
+        ":kselftest_futex_futex_requeue",
+        ":kselftest_futex_futex_wait_private_mapped_file",
+        ":kselftest_futex_futex_wait_timeout",
+        ":kselftest_futex_futex_wait_uninitialized_heap",
+        ":kselftest_futex_futex_wait_wouldblock",
+        ":kselftest_futex_futex_wait",
+        ":kselftest_futex_futex_waitv",
         ":kselftest_futex_functional_run.sh",
         ":kselftest_kcmp_tests_kcmp_test",
         ":kselftest_net_tests_socket",
@@ -324,19 +324,19 @@ sh_test {
         ":kselftest_timer_tests_set-timer-lat",
         ":kselftest_timer_tests_threadtest",
         ":kselftest_timer_tests_valid-adjtimex",
-        ":kselftest_vm_tests_compaction_test",
-        ":kselftest_vm_tests_hugepage-mmap",
-        ":kselftest_vm_tests_hugepage-shm",
-        ":kselftest_vm_tests_map_hugetlb",
-        ":kselftest_vm_tests_mlock-random-test",
-        ":kselftest_vm_tests_mlock2-tests",
-        ":kselftest_vm_tests_on-fault-limit",
-        ":kselftest_vm_tests_mremap_dontunmap",
-        ":kselftest_vm_tests_mremap_test",
-        ":kselftest_vm_tests_userfaultfd",
-        ":kselftest_vm_tests_thuge-gen",
-        ":kselftest_vm_tests_transhuge-stress",
-        ":kselftest_vm_run_vmtests",
+        ":kselftest_mm_compaction_test",
+        ":kselftest_mm_hugepage_mmap",
+        ":kselftest_mm_hugepage_shm",
+        ":kselftest_mm_map_hugetlb",
+        ":kselftest_mm_mlock_random_test",
+        ":kselftest_mm_mlock2_tests",
+        ":kselftest_mm_on_fault_limit",
+        ":kselftest_mm_mremap_dontunmap",
+        ":kselftest_mm_mremap_test",
+        ":kselftest_mm_uffd_unit_tests",
+        ":kselftest_mm_thuge_gen",
+        ":kselftest_mm_transhuge_stress",
+        ":kselftest_mm_run_vmtests",
         ":kselftest_x86_tests_single_step_syscall",
         ":kselftest_x86_test_sysret_ss_attrs",
         ":kselftest_x86_tests_syscall_nt",
@@ -375,7 +375,7 @@ sh_test {
     data: [
         ":kselftest_capabilities_test_execve",
         ":kselftest_capabilities_validate_cap",
-        ":kselftest_futex_tests_futex_requeue_pi_mismatched_ops",
+        ":kselftest_futex_futex_requeue_pi_mismatched_ops",
         ":kselftest_kcmp_tests_kcmp_test",
         ":kselftest_net_tests_socket",
         ":kselftest_net_tests_psock_fanout",
@@ -421,6 +421,10 @@ cc_defaults {
     cflags: [
         // Hacks for bionic compatibility
         "-include bionic-compat.h",
+        "-D_GNU_SOURCE=",
+        "-O3",
+        "-pthread",
+        "-std=gnu99",
 
         "-Wall",
 
@@ -446,7 +450,10 @@ cc_defaults {
         "-Werror",
     ],
 
-    local_include_dirs: ["android/include"],
+    local_include_dirs: [
+        "android/include",
+        "tools/testing/selftests",
+    ],
     gtest: false,
     no_named_install_directory: true,
 }
@@ -464,7 +471,7 @@ cc_defaults {
 
 // binderfs test
 cc_test {
-    name: "kselftest_binderfs_tests_binderfs_test",
+    name: "kselftest_binderfs_binderfs_test",
     stem: "binderfs_test",
     relative_install_path: "vts_linux_kselftest/filesystems/binderfs",
     srcs: ["tools/testing/selftests/filesystems/binderfs/binderfs_test.c"],
@@ -524,17 +531,6 @@ cc_test {
 
 // capabilities tests
 cc_test {
-    name: "kselftest_capabilities_validate_cap",
-    stem: "validate_cap",
-    relative_install_path: "vts_linux_kselftest/capabilities",
-    srcs: [
-        "tools/testing/selftests/capabilities/validate_cap.c",
-    ],
-    defaults: ["kselftest_defaults"],
-    static_libs: ["libcap-ng"],
-}
-
-cc_test {
     name: "kselftest_capabilities_test_execve",
     stem: "test_execve",
     relative_install_path: "vts_linux_kselftest/capabilities",
@@ -545,6 +541,17 @@ cc_test {
     //    ":kselftest_capabilities_validate_cap",
     //],
     defaults: ["kselftest_template_defaults"],
+    static_libs: ["libcap-ng"],
+}
+
+cc_test {
+    name: "kselftest_capabilities_validate_cap",
+    stem: "validate_cap",
+    relative_install_path: "vts_linux_kselftest/capabilities",
+    srcs: [
+        "tools/testing/selftests/capabilities/validate_cap.c",
+    ],
+    defaults: ["kselftest_defaults"],
     static_libs: ["libcap-ng"],
 }
 
@@ -595,17 +602,6 @@ cc_test {
         "tools/testing/selftests/exec/execveat.c",
     ],
     defaults: ["kselftest_defaults"],
-}
-
-sh_test {
-    name: "kselftest_exec_execveat.sh",
-    sub_dir: "vts_linux_kselftest/exec",
-    src: "tools/testing/selftests/exec/execveat.sh",
-    //data: [
-    //    ":kselftest_exec_test_execveat",
-    //],
-    //filename_from_src: true,
-    compile_multilib: "both",
 }
 
 // Firmware test
@@ -700,7 +696,7 @@ sh_test {
 
 // Futex test
 cc_test {
-    name: "kselftest_futex_tests_futex_requeue_pi_mismatched_ops",
+    name: "kselftest_futex_futex_requeue_pi_mismatched_ops",
     stem: "futex_requeue_pi_mismatched_ops",
     relative_install_path: "vts_linux_kselftest/futex/functional",
     srcs: [
@@ -718,7 +714,7 @@ cc_test {
 }
 
 cc_test {
-    name: "kselftest_futex_tests_futex_requeue_pi_signal_restart",
+    name: "kselftest_futex_futex_requeue_pi_signal_restart",
     stem: "futex_requeue_pi_signal_restart",
     relative_install_path: "vts_linux_kselftest/futex/functional",
     srcs: [
@@ -736,7 +732,7 @@ cc_test {
 }
 
 cc_test {
-    name: "kselftest_futex_tests_futex_requeue_pi",
+    name: "kselftest_futex_futex_requeue_pi",
     stem: "futex_requeue_pi",
     relative_install_path: "vts_linux_kselftest/futex/functional",
     srcs: [
@@ -754,7 +750,7 @@ cc_test {
 }
 
 cc_test {
-    name: "kselftest_futex_tests_futex_requeue",
+    name: "kselftest_futex_futex_requeue",
     stem: "futex_requeue",
     relative_install_path: "vts_linux_kselftest/futex/functional",
     srcs: [
@@ -772,7 +768,7 @@ cc_test {
 }
 
 cc_test {
-    name: "kselftest_futex_tests_futex_wait_private_mapped_file",
+    name: "kselftest_futex_futex_wait_private_mapped_file",
     stem: "futex_wait_private_mapped_file",
     relative_install_path: "vts_linux_kselftest/futex/functional",
     srcs: [
@@ -790,7 +786,7 @@ cc_test {
 }
 
 cc_test {
-    name: "kselftest_futex_tests_futex_wait_timeout",
+    name: "kselftest_futex_futex_wait_timeout",
     stem: "futex_wait_timeout",
     relative_install_path: "vts_linux_kselftest/futex/functional",
     srcs: [
@@ -808,7 +804,7 @@ cc_test {
 }
 
 cc_test {
-    name: "kselftest_futex_tests_futex_wait_uninitialized_heap",
+    name: "kselftest_futex_futex_wait_uninitialized_heap",
     stem: "futex_wait_uninitialized_heap",
     relative_install_path: "vts_linux_kselftest/futex/functional",
     srcs: [
@@ -826,7 +822,7 @@ cc_test {
 }
 
 cc_test {
-    name: "kselftest_futex_tests_futex_wait_wouldblock",
+    name: "kselftest_futex_futex_wait_wouldblock",
     stem: "futex_wait_wouldblock",
     relative_install_path: "vts_linux_kselftest/futex/functional",
     srcs: [
@@ -844,7 +840,7 @@ cc_test {
 }
 
 cc_test {
-    name: "kselftest_futex_tests_futex_wait",
+    name: "kselftest_futex_futex_wait",
     stem: "futex_wait",
     relative_install_path: "vts_linux_kselftest/futex/functional",
     srcs: [
@@ -862,7 +858,7 @@ cc_test {
 }
 
 cc_test {
-    name: "kselftest_futex_tests_futex_waitv",
+    name: "kselftest_futex_futex_waitv",
     stem: "futex_waitv",
     relative_install_path: "vts_linux_kselftest/futex/functional",
     srcs: [
@@ -886,16 +882,16 @@ sh_test {
     filename_from_src: true,
     compile_multilib: "both",
     //data: [
-    //    ":kselftest_futex_tests_futex_requeue_pi_mismatched_ops",
-    //    ":kselftest_futex_tests_futex_requeue_pi_signal_restart",
-    //    ":kselftest_futex_tests_futex_requeue_pi",
-    //    ":kselftest_futex_tests_futex_requeue",
-    //    ":kselftest_futex_tests_futex_wait_private_mapped_file",
-    //    ":kselftest_futex_tests_futex_wait_timeout",
-    //    ":kselftest_futex_tests_futex_wait_uninitialized_heap",
-    //    ":kselftest_futex_tests_futex_wait_wouldblock",
-    //    ":kselftest_futex_tests_futex_wait",
-    //    ":kselftest_futex_tests_futex_waitv",
+    //    ":kselftest_futex_futex_requeue_pi_mismatched_ops",
+    //    ":kselftest_futex_futex_requeue_pi_signal_restart",
+    //    ":kselftest_futex_futex_requeue_pi",
+    //    ":kselftest_futex_futex_requeue",
+    //    ":kselftest_futex_futex_wait_private_mapped_file",
+    //    ":kselftest_futex_futex_wait_timeout",
+    //    ":kselftest_futex_futex_wait_uninitialized_heap",
+    //    ":kselftest_futex_futex_wait_wouldblock",
+    //    ":kselftest_futex_futex_wait",
+    //    ":kselftest_futex_futex_waitv",
     //],
     //test_config_template: ":kselftest_template",
 }
@@ -1512,15 +1508,6 @@ cc_test {
     defaults: ["kselftest_template_defaults"],
 }
 
-// User test
-sh_test {
-    name: "kselftest_user_test_user_copy",
-    sub_dir: "vts_linux_kselftest/user",
-    src: "tools/testing/selftests/user/test_user_copy.sh",
-    filename_from_src: true,
-    compile_multilib: "both",
-}
-
 // vdso test
 cc_test {
     name: "kselftest_vdso_test_abi",
@@ -1585,119 +1572,65 @@ cc_test {
 cc_library_static {
     name: "kselftest_vm_util",
     srcs: [
-        "tools/testing/selftests/vm/vm_util.c",
+        "tools/testing/selftests/mm/vm_util.c",
     ],
     export_include_dirs: [
-        "tools/testing/selftests/vm",
+        "tools/testing/selftests/mm",
     ],
     defaults: ["kselftest_template_defaults"],
 }
 
+cc_library_static {
+    name: "kselftest_mm_uffd_common",
+    srcs: [
+        "tools/testing/selftests/mm/uffd-common.c",
+    ],
+    export_include_dirs: [
+        "tools/testing/selftests/mm",
+    ],
+    defaults: ["kselftest_template_defaults"],
+    static_libs: ["kselftest_vm_util"],
+}
+
 cc_test {
-    name: "kselftest_vm_tests_compaction_test",
+    name: "kselftest_mm_compaction_test",
     stem: "compaction_test",
-    relative_install_path: "vts_linux_kselftest/vm",
+    relative_install_path: "vts_linux_kselftest/mm",
     srcs: [
-        "tools/testing/selftests/vm/compaction_test.c",
+        "tools/testing/selftests/mm/compaction_test.c",
     ],
     defaults: ["kselftest_template_defaults"],
     static_libs: ["libcap"],
 }
 
 cc_test {
-    name: "kselftest_vm_tests_hugepage-mmap",
+    name: "kselftest_mm_hugepage_mmap",
     stem: "hugepage-mmap",
-    relative_install_path: "vts_linux_kselftest/vm",
+    relative_install_path: "vts_linux_kselftest/mm",
     srcs: [
-        "tools/testing/selftests/vm/hugepage-mmap.c",
+        "tools/testing/selftests/mm/hugepage-mmap.c",
     ],
     defaults: ["kselftest_template_defaults"],
     static_libs: ["libcap"],
 }
 
 cc_test {
-    name: "kselftest_vm_tests_hugepage-shm",
+    name: "kselftest_mm_hugepage_shm",
     stem: "hugepage-shm",
-    relative_install_path: "vts_linux_kselftest/vm",
+    relative_install_path: "vts_linux_kselftest/mm",
     srcs: [
-        "tools/testing/selftests/vm/hugepage-shm.c",
+        "tools/testing/selftests/mm/hugepage-shm.c",
     ],
     defaults: ["kselftest_template_defaults"],
     static_libs: ["libcap"],
 }
 
 cc_test {
-    name: "kselftest_vm_tests_map_hugetlb",
+    name: "kselftest_mm_map_hugetlb",
     stem: "map_hugetlb",
-    relative_install_path: "vts_linux_kselftest/vm",
+    relative_install_path: "vts_linux_kselftest/mm",
     srcs: [
-        "tools/testing/selftests/vm/map_hugetlb.c",
-    ],
-    defaults: ["kselftest_template_defaults"],
-    static_libs: ["libcap"],
-}
-
-cc_test {
-    name: "kselftest_vm_tests_mlock-random-test",
-    stem: "mlock-random-test",
-    relative_install_path: "vts_linux_kselftest/vm",
-    srcs: [
-        "tools/testing/selftests/vm/mlock-random-test.c",
-    ],
-    defaults: ["kselftest_template_defaults"],
-    static_libs: ["libcap"],
-}
-
-cc_test {
-    name: "kselftest_vm_tests_mlock2-tests",
-    stem: "mlock2-tests",
-    relative_install_path: "vts_linux_kselftest/vm",
-    srcs: [
-        "tools/testing/selftests/vm/mlock2-tests.c",
-    ],
-    defaults: ["kselftest_template_defaults"],
-    static_libs: ["libcap"],
-}
-
-cc_test {
-    name: "kselftest_vm_tests_on-fault-limit",
-    stem: "on-fault-limit",
-    relative_install_path: "vts_linux_kselftest/vm",
-    srcs: [
-        "tools/testing/selftests/vm/on-fault-limit.c",
-    ],
-    defaults: ["kselftest_template_defaults"],
-    static_libs: ["libcap"],
-}
-
-cc_test {
-    name: "kselftest_vm_tests_mremap_dontunmap",
-    stem: "mremap_dontunmap",
-    relative_install_path: "vts_linux_kselftest/vm",
-    srcs: [
-        "tools/testing/selftests/vm/mremap_dontunmap.c",
-    ],
-    defaults: ["kselftest_template_defaults"],
-    static_libs: ["libcap"],
-}
-
-cc_test {
-    name: "kselftest_vm_tests_mremap_test",
-    stem: "mremap_test",
-    relative_install_path: "vts_linux_kselftest/vm",
-    srcs: [
-        "tools/testing/selftests/vm/mremap_test.c",
-    ],
-    defaults: ["kselftest_template_defaults"],
-    static_libs: ["libcap"],
-}
-
-cc_test {
-    name: "kselftest_vm_tests_userfaultfd",
-    stem: "userfaultfd",
-    relative_install_path: "vts_linux_kselftest/vm",
-    srcs: [
-        "tools/testing/selftests/vm/userfaultfd.c",
+        "tools/testing/selftests/mm/map_hugetlb.c",
     ],
     defaults: ["kselftest_template_defaults"],
     static_libs: [
@@ -1707,33 +1640,97 @@ cc_test {
 }
 
 cc_test {
-    name: "kselftest_vm_tests_thuge-gen",
+    name: "kselftest_mm_mlock_random_test",
+    stem: "mlock-random-test",
+    relative_install_path: "vts_linux_kselftest/mm",
+    srcs: [
+        "tools/testing/selftests/mm/mlock-random-test.c",
+    ],
+    defaults: ["kselftest_template_defaults"],
+    static_libs: ["libcap"],
+}
+
+cc_test {
+    name: "kselftest_mm_mlock2_tests",
+    stem: "mlock2-tests",
+    relative_install_path: "vts_linux_kselftest/mm",
+    srcs: [
+        "tools/testing/selftests/mm/mlock2-tests.c",
+    ],
+    defaults: ["kselftest_template_defaults"],
+    static_libs: [
+        "libcap",
+        "kselftest_vm_util",
+    ],
+}
+
+cc_test {
+    name: "kselftest_mm_on_fault_limit",
+    stem: "on-fault-limit",
+    relative_install_path: "vts_linux_kselftest/mm",
+    srcs: [
+        "tools/testing/selftests/mm/on-fault-limit.c",
+    ],
+    defaults: ["kselftest_template_defaults"],
+    static_libs: ["libcap"],
+}
+
+cc_test {
+    name: "kselftest_mm_mremap_dontunmap",
+    stem: "mremap_dontunmap",
+    relative_install_path: "vts_linux_kselftest/mm",
+    srcs: [
+        "tools/testing/selftests/mm/mremap_dontunmap.c",
+    ],
+    defaults: ["kselftest_template_defaults"],
+    static_libs: ["libcap"],
+}
+
+cc_test {
+    name: "kselftest_mm_mremap_test",
+    stem: "mremap_test",
+    relative_install_path: "vts_linux_kselftest/mm",
+    srcs: [
+        "tools/testing/selftests/mm/mremap_test.c",
+    ],
+    defaults: ["kselftest_template_defaults"],
+    static_libs: ["libcap"],
+}
+
+cc_test {
+    name: "kselftest_mm_thuge_gen",
     stem: "thuge-gen",
-    relative_install_path: "vts_linux_kselftest/vm",
+    relative_install_path: "vts_linux_kselftest/mm",
     srcs: [
-        "tools/testing/selftests/vm/thuge-gen.c",
+        "tools/testing/selftests/mm/thuge-gen.c",
     ],
     defaults: ["kselftest_template_defaults"],
-    static_libs: ["libcap"],
+    static_libs: [
+        "libcap",
+        "kselftest_vm_util",
+    ],
 }
 
 cc_test {
-    name: "kselftest_vm_tests_transhuge-stress",
+    name: "kselftest_mm_transhuge_stress",
     stem: "transhuge-stress",
-    relative_install_path: "vts_linux_kselftest/vm",
+    relative_install_path: "vts_linux_kselftest/mm",
     srcs: [
-        "tools/testing/selftests/vm/transhuge-stress.c",
+        "tools/testing/selftests/mm/transhuge-stress.c",
     ],
     defaults: ["kselftest_template_defaults"],
-    static_libs: ["libcap"],
+    static_libs: [
+        "libcap",
+        "kselftest_vm_util",
+    ],
 }
 
 cc_test {
-    name: "kselftest_vm64_tests",
+    name: "kselftest_mm_virtual_address_range",
     stem: "virtual_address_range",
-    relative_install_path: "vts_linux_kselftest/vm",
+    relative_install_path: "vts_linux_kselftest/mm",
     srcs: [
-        "tools/testing/selftests/vm/virtual_address_range.c",
+        "tools/testing/selftests/mm/virtual_address_range.c",
     ],
     defaults: ["kselftest_template_defaults"],
     enabled: false,
@@ -1745,20 +1742,34 @@ cc_test {
     },
 }
 
+cc_test {
+    name: "kselftest_mm_uffd_unit_tests",
+    stem: "uffd-unit-tests",
+    relative_install_path: "vts_linux_kselftest/mm",
+    srcs: [
+        "tools/testing/selftests/mm/uffd-unit-tests.c",
+    ],
+    defaults: ["kselftest_template_defaults"],
+    static_libs: [
+        "libcap",
+        "kselftest_mm_uffd_common",
+        "kselftest_vm_util",
+    ],
+}
+
 sh_test {
-    name: "kselftest_vm_run_vmtests",
-    sub_dir: "vts_linux_kselftest/vm",
-    src: "tools/testing/selftests/vm/run_vmtests.sh",
+    name: "kselftest_mm_run_vmtests",
+    sub_dir: "vts_linux_kselftest/mm",
+    src: "tools/testing/selftests/mm/run_vmtests.sh",
     filename_from_src: true,
     compile_multilib: "both",
     //data: [
-    //    ":kselftest_vm_tests_mlock-random-test",
-    //    ":kselftest_vm_tests_mlock2-tests",
-    //    ":kselftest_vm_tests_on-fault-limit",
-    //    ":kselftest_vm_tests_mremap_dontunmap",
-    //    ":kselftest_vm_tests_mremap_test",
-    //    ":kselftest_vm_tests_userfaultfd",
-    //    ":kselftest_vm_tests_thuge-gen",
+    //    ":kselftest_mm_mlock-random-test",
+    //    ":kselftest_mm_mlock2-tests",
+    //    ":kselftest_mm_on-fault-limit",
+    //    ":kselftest_mm_mremap_dontunmap",
+    //    ":kselftest_mm_mremap_test",
+    //    ":kselftest_mm_thuge-gen",
     //],
     //test_config_template: ":kselftest_template",
 }
