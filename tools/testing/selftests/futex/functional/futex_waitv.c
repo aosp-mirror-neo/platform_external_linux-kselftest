@@ -110,6 +110,10 @@ int main(int argc, char *argv[])
 	}
 
 	/* Shared waitv */
+#ifdef __ANDROID__
+	ksft_test_result_skip("shmget not implemented on Android\n");
+	ksft_test_result_skip("shmget not implemented on Android\n");
+#else
 	for (i = 0; i < NR_FUTEXES; i++) {
 		int shm_id = shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0666);
 
@@ -171,6 +175,7 @@ int main(int argc, char *argv[])
 		error("gettime64 failed\n", errno);
 
 	to.tv_sec++;
+#endif
 
 	res = futex_waitv(waitv, NR_FUTEXES, 0, &to, CLOCK_MONOTONIC);
 	if (res == EINVAL) {

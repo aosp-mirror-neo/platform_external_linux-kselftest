@@ -94,6 +94,9 @@ int main(int argc, char *argv[])
 	}
 
 	/* Testing an anon page shared memory */
+#ifdef __ANDROID__
+	ksft_test_result_skip("shmget not implemented on Android\n");
+#else
 	shm_id = shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0666);
 	if (shm_id < 0) {
 		perror("shmget");
@@ -120,7 +123,7 @@ int main(int argc, char *argv[])
 	} else {
 		ksft_test_result_pass("futex_wake shared (page anon) succeeds\n");
 	}
-
+#endif
 
 	/* Testing a file backed shared memory */
 	fd = open(SHM_PATH, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -161,7 +164,9 @@ int main(int argc, char *argv[])
 	}
 
 	/* Freeing resources */
+#ifndef __ANDROID__
 	shmdt(shared_data);
+#endif
 	munmap(shm, sizeof(f_private));
 	remove(SHM_PATH);
 	close(fd);
