@@ -29,7 +29,6 @@
     <test class="com.android.tradefed.testtype.binary.KernelTargetTest" >
         <option name="exit-code-skip" value="4" />
         <option name="skip-binary-check" value="true" />
-        <option name="abort-if-device-lost" value="true" />
         <option name="abort-if-root-lost" value="true" />
         <option name="test-command-line" key="{MODULE}" value='if [ -d &ktest_dir;/*/. ]; then cd &ktest_dir;/*/.; ./{MODULE}; else echo "{MODULE} skipped"; exit 4; fi' />
     </test>

@@ -33,7 +33,6 @@
     <test class="com.android.tradefed.testtype.binary.KernelTargetTest" >
         <option name="exit-code-skip" value="4" />
         <option name="skip-binary-check" value="true" />
-        <option name="abort-if-device-lost" value="true" />
         <option name="abort-if-root-lost" value="true" />
         <option name="test-command-line" key="capabilities_test_execve_riscv_64" value="cd &ktest_dir;/*/.; ./test_execve" />
         <option name="test-command-line" key="futex_functional_run.sh_riscv_64" value="cd &ktest_dir;/*/.; USE_COLOR=0 ./run.sh" />
