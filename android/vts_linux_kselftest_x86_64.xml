@@ -33,7 +33,6 @@
     <test class="com.android.tradefed.testtype.binary.KernelTargetTest" >
         <option name="exit-code-skip" value="4" />
         <option name="skip-binary-check" value="true" />
-        <option name="abort-if-device-lost" value="true" />
         <option name="abort-if-root-lost" value="true" />
         <option name="test-command-line" key="binderfs_x86_64" value="cd &ktest_dir;/*/.; ./binderfs_test" />
         <option name="test-command-line" key="capabilities_test_execve_x86_64" value="cd &ktest_dir;/*/.; ./test_execve" />
