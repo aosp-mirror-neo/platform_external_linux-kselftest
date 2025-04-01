@@ -33,7 +33,6 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <bits/wordsize.h>
 #include <net/ethernet.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
@@ -363,6 +362,7 @@ static inline void *get_next_frame(struct ring *ring, int n)
 		return f0 + (n * ring->req3.tp_frame_size);
 	default:
 		bug_on(1);
+		return NULL;
 	}
 }
 
@@ -785,7 +785,7 @@ static int test_kernel_bit_width(void)
 
 static int test_user_bit_width(void)
 {
-	return __WORDSIZE;
+	return sizeof(long) * 8;
 }
 
 static const char *tpacket_str[] = {
