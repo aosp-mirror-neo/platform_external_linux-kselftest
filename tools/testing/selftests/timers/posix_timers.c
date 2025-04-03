@@ -255,6 +255,11 @@ static void *ignore_thread(void *arg)
 
 static void check_sig_ign(int thread)
 {
+	if (!ksft_min_kernel_version(6, 13)) {
+		// see caf77435dd8a "signal: Handle ignored signals in do_sigaction(action != SIG_IGN)"
+		ksft_test_result_skip("Depends on refactor of posix timers in 6.13\n");
+		return;
+	}
 	struct tmrsig tsig = { };
 	struct itimerspec its;
 	unsigned int tid = 0;
@@ -341,6 +346,10 @@ static void check_sig_ign(int thread)
 
 static void check_rearm(void)
 {
+	if (!ksft_min_kernel_version(6, 13)) {
+		ksft_test_result_skip("Depends on refactor of posix timers in 6.13\n");
+		return;
+	}
 	struct tmrsig tsig = { };
 	struct itimerspec its;
 	struct sigaction sa;
@@ -397,6 +406,10 @@ static void check_rearm(void)
 
 static void check_delete(void)
 {
+	if (!ksft_min_kernel_version(6, 13)) {
+		ksft_test_result_skip("Depends on refactor of posix timers in 6.13\n");
+		return;
+	}
 	struct tmrsig tsig = { };
 	struct itimerspec its;
 	struct sigaction sa;
@@ -454,6 +467,10 @@ static inline int64_t calcdiff_ns(struct timespec t1, struct timespec t2)
 
 static void check_sigev_none(int which, const char *name)
 {
+	if (!ksft_min_kernel_version(6, 13)) {
+		ksft_test_result_skip("Depends on refactor of posix timers in 6.13\n");
+		return;
+	}
 	struct timespec start, now;
 	struct itimerspec its;
 	struct sigevent sev;
@@ -492,6 +509,10 @@ static void check_sigev_none(int which, const char *name)
 
 static void check_gettime(int which, const char *name)
 {
+	if (!ksft_min_kernel_version(6, 13)) {
+		ksft_test_result_skip("Depends on refactor of posix timers in 6.13\n");
+		return;
+	}
 	struct itimerspec its, prev;
 	struct timespec start, now;
 	struct sigevent sev;
