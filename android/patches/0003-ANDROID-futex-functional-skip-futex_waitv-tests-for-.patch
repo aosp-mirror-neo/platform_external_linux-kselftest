@@ -1,0 +1,86 @@
+From 6f4b9c2f75b077b02e2ad9eefe6f1cef5b485711 Mon Sep 17 00:00:00 2001
+From: Edward Liaw <edliaw@google.com>
+Date: Fri, 4 Apr 2025 23:40:14 +0000
+Subject: [PATCH 3/9] ANDROID: futex/functional: skip futex_waitv tests for
+ <5.16
+
+futex_waitv is not introduced until 5.16, so skip it for backwards
+compatibility.
+
+Bug: 234151152
+Test: mma
+Signed-off-by: Edward Liaw <edliaw@google.com>
+---
+ .../selftests/futex/functional/futex_wait_timeout.c | 11 ++++++++---
+ .../futex/functional/futex_wait_wouldblock.c        | 13 +++++++++----
+ .../selftests/futex/functional/futex_waitv.c        |  8 ++++++++
+ 3 files changed, 25 insertions(+), 7 deletions(-)
+
+diff --git a/tools/testing/selftests/futex/functional/futex_wait_timeout.c b/tools/testing/selftests/futex/functional/futex_wait_timeout.c
+index d183f878360b..323cab339814 100644
+--- a/tools/testing/selftests/futex/functional/futex_wait_timeout.c
++++ b/tools/testing/selftests/futex/functional/futex_wait_timeout.c
+@@ -64,9 +64,14 @@ void *get_pi_lock(void *arg)
+ static void test_timeout(int res, int *ret, char *test_name, int err)
+ {
+ 	if (!res || errno != err) {
+-		ksft_test_result_fail("%s returned %d\n", test_name,
+-				      res < 0 ? errno : res);
+-		*ret = RET_FAIL;
++		if (errno == ENOSYS) {
++			ksft_test_result_skip("%s: %s\n",
++					      test_name, strerror(errno));
++		} else {
++			ksft_test_result_fail("%s returned %d\n", test_name,
++					      res < 0 ? errno : res);
++			*ret = RET_FAIL;
++		}
+ 	} else {
+ 		ksft_test_result_pass("%s succeeds\n", test_name);
+ 	}
+diff --git a/tools/testing/selftests/futex/functional/futex_wait_wouldblock.c b/tools/testing/selftests/futex/functional/futex_wait_wouldblock.c
+index 7d7a6a06cdb7..d43b0310d7c4 100644
+--- a/tools/testing/selftests/futex/functional/futex_wait_wouldblock.c
++++ b/tools/testing/selftests/futex/functional/futex_wait_wouldblock.c
+@@ -98,10 +98,15 @@ int main(int argc, char *argv[])
+ 	info("Calling futex_waitv on f1: %u @ %p with val=%u\n", f1, &f1, f1+1);
+ 	res = futex_waitv(&waitv, 1, 0, &to, CLOCK_MONOTONIC);
+ 	if (!res || errno != EWOULDBLOCK) {
+-		ksft_test_result_pass("futex_waitv returned: %d %s\n",
+-				      res ? errno : res,
+-				      res ? strerror(errno) : "");
+-		ret = RET_FAIL;
++		if (errno == ENOSYS) {
++			ksft_test_result_skip("futex_waitv: %s\n",
++					      strerror(errno));
++		} else {
++			ksft_test_result_fail("futex_waitv returned: %d %s\n",
++					      res ? errno : res,
++					      res ? strerror(errno) : "");
++			ret = RET_FAIL;
++		}
+ 	} else {
+ 		ksft_test_result_pass("futex_waitv\n");
+ 	}
+diff --git a/tools/testing/selftests/futex/functional/futex_waitv.c b/tools/testing/selftests/futex/functional/futex_waitv.c
+index 5c6630be2586..699bf8e65e02 100644
+--- a/tools/testing/selftests/futex/functional/futex_waitv.c
++++ b/tools/testing/selftests/futex/functional/futex_waitv.c
+@@ -59,6 +59,14 @@ void *waiterfn(void *arg)
+ 
+ int main(int argc, char *argv[])
+ {
++	if (!ksft_min_kernel_version(5, 16)) {
++		ksft_print_header();
++		ksft_set_plan(0);
++		ksft_print_msg("%s: FUTEX_WAITV not implemented until 5.16\n",
++			       basename(argv[0]));
++		ksft_print_cnts();
++		return KSFT_SKIP;
++	}
+ 	pthread_t waiter;
+ 	int res, ret = RET_PASS;
+ 	struct timespec to;
+-- 
+2.49.0.504.g3bcea36a83-goog
+

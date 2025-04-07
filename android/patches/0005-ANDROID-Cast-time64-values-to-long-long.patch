@@ -1,0 +1,105 @@
+From 26b5211d32b6e5e2ed9ee707f3d6166e817119ee Mon Sep 17 00:00:00 2001
+From: Edward Liaw <edliaw@google.com>
+Date: Mon, 27 Jan 2025 23:44:29 +0000
+Subject: [PATCH 5/9] ANDROID: Cast time64 values to long long
+
+Resolves overflow compiler warnings from clang.
+
+Test: mma
+Signed-off-by: Edward Liaw <edliaw@google.com>
+---
+ tools/testing/selftests/timers/alarmtimer-suspend.c |  4 ++--
+ tools/testing/selftests/timers/nanosleep.c          |  2 +-
+ tools/testing/selftests/timers/nsleep-lat.c         |  2 +-
+ tools/testing/selftests/timers/valid-adjtimex.c     | 12 ++++++------
+ 4 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/tools/testing/selftests/timers/alarmtimer-suspend.c b/tools/testing/selftests/timers/alarmtimer-suspend.c
+index a9ef76ea6051..e9a70b168d29 100644
+--- a/tools/testing/selftests/timers/alarmtimer-suspend.c
++++ b/tools/testing/selftests/timers/alarmtimer-suspend.c
+@@ -32,7 +32,7 @@
+ #include <errno.h>
+ #include "../kselftest.h"
+ 
+-#define UNREASONABLE_LAT (NSEC_PER_SEC * 5) /* hopefully we resume in 5 secs */
++#define UNREASONABLE_LAT ((long long) NSEC_PER_SEC * 5) /* hopefully we resume in 5 secs */
+ 
+ #define SUSPEND_SECS 15
+ int alarmcount;
+@@ -89,7 +89,7 @@ void sigalarm(int signo)
+ 	alarmcount++;
+ 
+ 	delta_ns = timespec_sub(start_time, ts);
+-	delta_ns -= NSEC_PER_SEC * SUSPEND_SECS * alarmcount;
++	delta_ns -= (long long) NSEC_PER_SEC * SUSPEND_SECS * alarmcount;
+ 
+ 	printf("ALARM(%i): %ld:%ld latency: %lld ns ", alarmcount, ts.tv_sec,
+ 							ts.tv_nsec, delta_ns);
+diff --git a/tools/testing/selftests/timers/nanosleep.c b/tools/testing/selftests/timers/nanosleep.c
+index 252c6308c569..6119dd981fb7 100644
+--- a/tools/testing/selftests/timers/nanosleep.c
++++ b/tools/testing/selftests/timers/nanosleep.c
+@@ -138,7 +138,7 @@ int main(int argc, char **argv)
+ 		fflush(stdout);
+ 
+ 		length = 10;
+-		while (length <= (NSEC_PER_SEC * 10)) {
++		while (length <= ((long long) NSEC_PER_SEC * 10)) {
+ 			ret = nanosleep_test(clockid, length);
+ 			if (ret == UNSUPPORTED) {
+ 				ksft_test_result_skip("%-31s\n", clockstring(clockid));
+diff --git a/tools/testing/selftests/timers/nsleep-lat.c b/tools/testing/selftests/timers/nsleep-lat.c
+index de23dc0c9f97..18f4c330dc5f 100644
+--- a/tools/testing/selftests/timers/nsleep-lat.c
++++ b/tools/testing/selftests/timers/nsleep-lat.c
+@@ -146,7 +146,7 @@ int main(int argc, char **argv)
+ 			continue;
+ 
+ 		length = 10;
+-		while (length <= (NSEC_PER_SEC * 10)) {
++		while (length <= ((long long) NSEC_PER_SEC * 10)) {
+ 			ret = nanosleep_lat_test(clockid, length);
+ 			if (ret)
+ 				break;
+diff --git a/tools/testing/selftests/timers/valid-adjtimex.c b/tools/testing/selftests/timers/valid-adjtimex.c
+index 6b7801055ad1..dbe4aa74d2ee 100644
+--- a/tools/testing/selftests/timers/valid-adjtimex.c
++++ b/tools/testing/selftests/timers/valid-adjtimex.c
+@@ -260,16 +260,16 @@ int validate_set_offset(void)
+ 	if (set_offset(-NSEC_PER_SEC - 1, 1))
+ 		return -1;
+ 
+-	if (set_offset(5 * NSEC_PER_SEC, 1))
++	if (set_offset(5 * (long long) NSEC_PER_SEC, 1))
+ 		return -1;
+ 
+-	if (set_offset(-5 * NSEC_PER_SEC, 1))
++	if (set_offset(-5 * (long long) NSEC_PER_SEC, 1))
+ 		return -1;
+ 
+-	if (set_offset(5 * NSEC_PER_SEC + NSEC_PER_SEC / 2, 1))
++	if (set_offset(5 * (long long) NSEC_PER_SEC + NSEC_PER_SEC / 2, 1))
+ 		return -1;
+ 
+-	if (set_offset(-5 * NSEC_PER_SEC - NSEC_PER_SEC / 2, 1))
++	if (set_offset(-5 * (long long) NSEC_PER_SEC - NSEC_PER_SEC / 2, 1))
+ 		return -1;
+ 
+ 	if (set_offset(USEC_PER_SEC - 1, 0))
+@@ -287,10 +287,10 @@ int validate_set_offset(void)
+ 	if (set_offset(-5 * USEC_PER_SEC, 0))
+ 		return -1;
+ 
+-	if (set_offset(5 * USEC_PER_SEC + USEC_PER_SEC / 2, 0))
++	if (set_offset(5 * (long long) USEC_PER_SEC + USEC_PER_SEC / 2, 0))
+ 		return -1;
+ 
+-	if (set_offset(-5 * USEC_PER_SEC - USEC_PER_SEC / 2, 0))
++	if (set_offset(-5 * (long long) USEC_PER_SEC - USEC_PER_SEC / 2, 0))
+ 		return -1;
+ 
+ 	/* Test invalid values */
+-- 
+2.49.0.504.g3bcea36a83-goog
+
