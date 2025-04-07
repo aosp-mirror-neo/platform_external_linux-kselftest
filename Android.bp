@@ -435,6 +435,7 @@ cc_defaults {
         "-Wno-sign-compare",
         "-Wno-shift-negative-value",
         "-Wno-switch",
+        "-Wno-tautological-compare",
         "-Wno-absolute-value",
         "-Wno-non-literal-null-conversion",
         "-Wno-unused-value",
