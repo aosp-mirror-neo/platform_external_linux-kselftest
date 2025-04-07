@@ -28,15 +28,12 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/mman.h>
-#include <sys/utsname.h>
 #include <linux/if_packet.h>
 #include <linux/filter.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <unistd.h>
-#ifndef __ANDROID__
 #include <bits/wordsize.h>
-#endif
 #include <net/ethernet.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
@@ -366,7 +363,6 @@ static inline void *get_next_frame(struct ring *ring, int n)
 		return f0 + (n * ring->req3.tp_frame_size);
 	default:
 		bug_on(1);
-		return NULL;
 	}
 }
 
@@ -833,34 +829,9 @@ static int test_tpacket(int version, int type)
 	return 0;
 }
 
-void get_kernel_version(int *version, int *patchlevel)
-{
-	int ret, sublevel;
-	struct utsname utsname;
-
-	ret = uname(&utsname);
-	if (ret) {
-		perror("uname");
-		exit(1);
-	}
-
-	ret = sscanf(utsname.release, "%d.%d.%d", version, patchlevel,
-		     &sublevel);
-	if (ret < 0) {
-		perror("sscanf");
-		exit(1);
-	} else if (ret != 3) {
-		printf("Malformed kernel version %s\n", &utsname.release);
-		exit(1);
-	}
-}
-
 int main(void)
 {
 	int ret = 0;
-	int version, patchlevel;
-
-	get_kernel_version(&version, &patchlevel);
 
 	ret |= test_tpacket(TPACKET_V1, PACKET_RX_RING);
 	ret |= test_tpacket(TPACKET_V1, PACKET_TX_RING);
@@ -869,8 +840,7 @@ int main(void)
 	ret |= test_tpacket(TPACKET_V2, PACKET_TX_RING);
 
 	ret |= test_tpacket(TPACKET_V3, PACKET_RX_RING);
-	if (version > 4 || (version == 4 && patchlevel >= 11))
-		ret |= test_tpacket(TPACKET_V3, PACKET_TX_RING);
+	ret |= test_tpacket(TPACKET_V3, PACKET_TX_RING);
 
 	if (ret)
 		return 1;

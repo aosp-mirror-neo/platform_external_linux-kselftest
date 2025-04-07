@@ -64,14 +64,9 @@ void *get_pi_lock(void *arg)
 static void test_timeout(int res, int *ret, char *test_name, int err)
 {
 	if (!res || errno != err) {
-		if (errno == ENOSYS) {
-			ksft_test_result_skip("%s returned %d\n", test_name,
-					      errno);
-		} else {
-			ksft_test_result_fail("%s returned %d\n", test_name,
-					      res < 0 ? errno : res);
-			*ret = RET_FAIL;
-		}
+		ksft_test_result_fail("%s returned %d\n", test_name,
+				      res < 0 ? errno : res);
+		*ret = RET_FAIL;
 	} else {
 		ksft_test_result_pass("%s succeeds\n", test_name);
 	}
@@ -80,11 +75,11 @@ static void test_timeout(int res, int *ret, char *test_name, int err)
 /*
  * Calculate absolute timeout and correct overflow
  */
-static int futex_get_abs_timeout(clockid_t clockid, struct timespec64 *to,
+static int futex_get_abs_timeout(clockid_t clockid, struct timespec *to,
 				 long timeout_ns)
 {
-	if (gettime64(clockid, to)) {
-		error("gettime64 failed\n", errno);
+	if (clock_gettime(clockid, to)) {
+		error("clock_gettime failed\n", errno);
 		return errno;
 	}
 
@@ -102,7 +97,7 @@ int main(int argc, char *argv[])
 {
 	futex_t f1 = FUTEX_INITIALIZER;
 	int res, ret = RET_PASS;
-	struct timespec64 to;
+	struct timespec to;
 	pthread_t thread;
 	int c;
 	struct futex_waitv waitv = {

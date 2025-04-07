@@ -13,13 +13,11 @@
  * we need to use the kernel's siginfo.h file and trick glibc
  * into accepting it.
  */
-#if defined(__GLIBC_PREREQ)
 #if !__GLIBC_PREREQ(2, 26)
 # include <asm/siginfo.h>
 # define __have_siginfo_t 1
 # define __have_sigval_t 1
 # define __have_sigevent_t 1
-#endif
 #endif
 
 #include <errno.h>
@@ -62,7 +60,9 @@
 #define SKIP(s, ...)	XFAIL(s, ##__VA_ARGS__)
 #endif
 
+#ifndef MIN
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
+#endif
 
 #ifndef PR_SET_PTRACER
 # define PR_SET_PTRACER 0x59616d61
@@ -130,6 +130,8 @@ struct seccomp_data {
 #  define __NR_seccomp 277
 # elif defined(__csky__)
 #  define __NR_seccomp 277
+# elif defined(__loongarch__)
+#  define __NR_seccomp 277
 # elif defined(__hppa__)
 #  define __NR_seccomp 338
 # elif defined(__powerpc__)
@@ -140,6 +142,8 @@ struct seccomp_data {
 #  define __NR_seccomp 337
 # elif defined(__sh__)
 #  define __NR_seccomp 372
+# elif defined(__mc68000__)
+#  define __NR_seccomp 380
 # else
 #  warning "seccomp syscall number unknown for this architecture"
 #  define __NR_seccomp 0xffff
@@ -394,6 +398,8 @@ TEST(mode_filter_without_nnp)
 		.filter = filter,
 	};
 	long ret;
+	cap_t cap = cap_get_proc();
+	cap_flag_value_t is_cap_sys_admin = 0;
 
 	ret = prctl(PR_GET_NO_NEW_PRIVS, 0, NULL, 0, 0);
 	ASSERT_LE(0, ret) {
@@ -402,8 +408,8 @@ TEST(mode_filter_without_nnp)
 	errno = 0;
 	ret = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog, 0, 0);
 	/* Succeeds with CAP_SYS_ADMIN, fails without */
-	/* TODO(wad) check caps not euid */
-	if (geteuid()) {
+	cap_get_flag(cap, CAP_SYS_ADMIN, CAP_EFFECTIVE, &is_cap_sys_admin);
+	if (!is_cap_sys_admin) {
 		EXPECT_EQ(-1, ret);
 		EXPECT_EQ(EACCES, errno);
 	} else {
@@ -780,7 +786,7 @@ void *kill_thread(void *data)
 	bool die = (bool)data;
 
 	if (die) {
-		prctl(PR_GET_SECCOMP, 0, 0, 0, 0);
+		syscall(__NR_getpid);
 		return (void *)SIBLING_EXIT_FAILURE;
 	}
 
@@ -799,11 +805,11 @@ void kill_thread_or_group(struct __test_metadata *_metadata,
 {
 	pthread_t thread;
 	void *status;
-	/* Kill only when calling __NR_prctl. */
+	/* Kill only when calling __NR_getpid. */
 	struct sock_filter filter_thread[] = {
 		BPF_STMT(BPF_LD|BPF_W|BPF_ABS,
 			offsetof(struct seccomp_data, nr)),
-		BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, __NR_prctl, 0, 1),
+		BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, __NR_getpid, 0, 1),
 		BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_KILL_THREAD),
 		BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_ALLOW),
 	};
@@ -815,7 +821,7 @@ void kill_thread_or_group(struct __test_metadata *_metadata,
 	struct sock_filter filter_process[] = {
 		BPF_STMT(BPF_LD|BPF_W|BPF_ABS,
 			offsetof(struct seccomp_data, nr)),
-		BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, __NR_prctl, 0, 1),
+		BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, __NR_getpid, 0, 1),
 		BPF_STMT(BPF_RET|BPF_K, kill),
 		BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_ALLOW),
 	};
@@ -857,14 +863,6 @@ void kill_thread_or_group(struct __test_metadata *_metadata,
 	exit(42);
 }
 
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_TSYNC_ESRCH not compatible < 5.7
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- * SECCOMP_FILTER_FLAG_SPEC_ALLOW not compatible < 4.17
- * SECCOMP_FILTER_FLAG_LOG not compatible < 4.14
- */
-#ifndef __ANDROID__
 TEST(KILL_thread)
 {
 	int status;
@@ -883,7 +881,6 @@ TEST(KILL_thread)
 	ASSERT_TRUE(WIFEXITED(status));
 	ASSERT_EQ(42, WEXITSTATUS(status));
 }
-#endif
 
 TEST(KILL_process)
 {
@@ -1581,7 +1578,7 @@ void start_tracer(struct __test_metadata *_metadata, int fd, pid_t tracee,
 		ASSERT_EQ(0, ret);
 	}
 	/* Directly report the status of our test harness results. */
-	syscall(__NR_exit, _metadata->passed ? EXIT_SUCCESS : EXIT_FAILURE);
+	syscall(__NR_exit, _metadata->exit_code);
 }
 
 /* Common tracer setup/teardown functions. */
@@ -1628,7 +1625,7 @@ void teardown_trace_fixture(struct __test_metadata *_metadata,
 		ASSERT_EQ(0, kill(tracer, SIGUSR1));
 		ASSERT_EQ(tracer, waitpid(tracer, &status, 0));
 		if (WEXITSTATUS(status))
-			_metadata->passed = 0;
+			_metadata->exit_code = KSFT_FAIL;
 	}
 }
 
@@ -1762,6 +1759,10 @@ TEST_F(TRACE_poke, getpid_runs_normally)
 				    NT_ARM_SYSTEM_CALL, &__v));	\
 	} while (0)
 # define SYSCALL_RET(_regs)	(_regs).regs[0]
+#elif defined(__loongarch__)
+# define ARCH_REGS		struct user_pt_regs
+# define SYSCALL_NUM(_regs)	(_regs).regs[11]
+# define SYSCALL_RET(_regs)	(_regs).regs[4]
 #elif defined(__riscv) && __riscv_xlen == 64
 # define ARCH_REGS		struct user_regs_struct
 # define SYSCALL_NUM(_regs)	(_regs).a7
@@ -1847,6 +1848,10 @@ TEST_F(TRACE_poke, getpid_runs_normally)
 # define ARCH_REGS		struct pt_regs
 # define SYSCALL_NUM(_regs)	(_regs).regs[3]
 # define SYSCALL_RET(_regs)	(_regs).regs[0]
+#elif defined(__mc68000__)
+# define ARCH_REGS		struct user_regs_struct
+# define SYSCALL_NUM(_regs)	(_regs).orig_d0
+# define SYSCALL_RET(_regs)	(_regs).d0
 #else
 # error "Do not know how to find your architecture's registers and syscalls"
 #endif
@@ -1911,7 +1916,7 @@ const bool ptrace_entry_set_syscall_ret =
  * Use PTRACE_GETREGS and PTRACE_SETREGS when available. This is useful for
  * architectures without HAVE_ARCH_TRACEHOOK (e.g. User-mode Linux).
  */
-#if defined(__x86_64__) || defined(__i386__) || defined(__mips__)
+#if defined(__x86_64__) || defined(__i386__) || defined(__mips__) || defined(__mc68000__)
 # define ARCH_GETREGS(_regs)	ptrace(PTRACE_GETREGS, tracee, 0, &(_regs))
 # define ARCH_SETREGS(_regs)	ptrace(PTRACE_SETREGS, tracee, 0, &(_regs))
 #else
@@ -2058,15 +2063,8 @@ void tracer_ptrace(struct __test_metadata *_metadata, pid_t tracee,
 	/* Make sure we got an appropriate message. */
 	ret = ptrace(PTRACE_GETEVENTMSG, tracee, NULL, &msg);
 	EXPECT_EQ(0, ret);
-
-	/*
-	 * TODO: b/33027081
-	 * PTRACE_EVENTMSG_SYSCALL_ENTRY and PTRACE_EVENTMSG_SYSCALL_EXIT not
-	 * compatible < 5.3 (see 201766a)
-	 *
-	 * EXPECT_EQ(entry ? PTRACE_EVENTMSG_SYSCALL_ENTRY
-	 *		: PTRACE_EVENTMSG_SYSCALL_EXIT, msg);
-	 */
+	EXPECT_EQ(entry ? PTRACE_EVENTMSG_SYSCALL_ENTRY
+			: PTRACE_EVENTMSG_SYSCALL_EXIT, msg);
 
 	/*
 	 * Some architectures only support setting return values during
@@ -2188,6 +2186,9 @@ FIXTURE_TEARDOWN(TRACE_syscall)
 
 TEST(negative_ENOSYS)
 {
+#if defined(__arm__)
+	SKIP(return, "arm32 does not support calling syscall -1");
+#endif
 	/*
 	 * There should be no difference between an "internal" skip
 	 * and userspace asking for syscall "-1".
@@ -2392,14 +2393,6 @@ TEST(seccomp_syscall_mode_lock)
 }
 
 /*
- * b/147676645
- * SECCOMP_FILTER_FLAG_TSYNC_ESRCH not compatible < 5.7
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- * SECCOMP_FILTER_FLAG_SPEC_ALLOW not compatible < 4.17
- * SECCOMP_FILTER_FLAG_LOG not compatible < 4.14
- */
-#ifndef __ANDROID__
-/*
  * Test detection of known and unknown filter flags. Userspace needs to be able
  * to check if a filter flag is supported by the current kernel and a good way
  * of doing that is by attempting to enter filter mode, with the flag bit in
@@ -2489,7 +2482,6 @@ TEST(detect_seccomp_filter_flags)
 		       flag);
 	}
 }
-#endif
 
 TEST(TSYNC_first)
 {
@@ -2871,11 +2863,6 @@ TEST_F(TSYNC, two_siblings_with_one_divergence)
 	EXPECT_EQ(SIBLING_EXIT_UNKILLED, (long)status);
 }
 
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_TSYNC_ESRCH not compatible < 5.7
- */
-#ifndef __ANDROID__
 TEST_F(TSYNC, two_siblings_with_one_divergence_no_tid_in_err)
 {
 	long ret, flags;
@@ -2924,7 +2911,6 @@ TEST_F(TSYNC, two_siblings_with_one_divergence_no_tid_in_err)
 	PTHREAD_JOIN(self->sibling[1].tid, &status);
 	EXPECT_EQ(SIBLING_EXIT_UNKILLED, (long)status);
 }
-#endif
 
 TEST_F(TSYNC, two_siblings_not_under_filter)
 {
@@ -3054,7 +3040,6 @@ TEST(syscall_restart)
 	};
 #if defined(__arm__)
 	struct utsname utsbuf;
-	int arm_version;
 #endif
 
 	ASSERT_EQ(0, pipe(pipefd));
@@ -3092,7 +3077,8 @@ TEST(syscall_restart)
 		timeout.tv_sec = 1;
 		errno = 0;
 		EXPECT_EQ(0, nanosleep(&timeout, NULL)) {
-			TH_LOG("Call to nanosleep() failed (errno %d)", errno);
+			TH_LOG("Call to nanosleep() failed (errno %d: %s)",
+				errno, strerror(errno));
 		}
 
 		/* Read final sync from parent. */
@@ -3104,8 +3090,7 @@ TEST(syscall_restart)
 		}
 
 		/* Directly report the status of our test harness results. */
-		syscall(__NR_exit, _metadata->passed ? EXIT_SUCCESS
-						     : EXIT_FAILURE);
+		syscall(__NR_exit, _metadata->exit_code);
 	}
 	EXPECT_EQ(0, close(pipefd[0]));
 
@@ -3170,12 +3155,12 @@ TEST(syscall_restart)
 	ret = get_syscall(_metadata, child_pid);
 #if defined(__arm__)
 	/*
+	 * FIXME:
 	 * - native ARM registers do NOT expose true syscall.
 	 * - compat ARM registers on ARM64 DO expose true syscall.
 	 */
 	ASSERT_EQ(0, uname(&utsbuf));
-	if (sscanf(utsbuf.machine, "armv%d", &arm_version) == 1 &&
-	    arm_version < 8) {
+	if (strncmp(utsbuf.machine, "arm", 3) == 0) {
 		EXPECT_EQ(__NR_nanosleep, ret);
 	} else
 #endif
@@ -3190,7 +3175,7 @@ TEST(syscall_restart)
 
 	ASSERT_EQ(child_pid, waitpid(child_pid, &status, 0));
 	if (WIFSIGNALED(status) || WEXITSTATUS(status))
-		_metadata->passed = 0;
+		_metadata->exit_code = KSFT_FAIL;
 }
 
 TEST_SIGNAL(filter_flag_log, SIGSYS)
@@ -3286,11 +3271,6 @@ TEST(get_action_avail)
 	EXPECT_EQ(errno, EOPNOTSUPP);
 }
 
-/*
- * b/147676645
- * PTRACE_SECCOMP_GET_METADATA not compatible < 4.16
- */
-#ifndef __ANDROID__
 TEST(get_metadata)
 {
 	pid_t pid;
@@ -3359,7 +3339,6 @@ TEST(get_metadata)
 skip:
 	ASSERT_EQ(0, kill(pid, SIGKILL));
 }
-#endif
 
 static int user_notif_syscall(int nr, unsigned int flags)
 {
@@ -3380,12 +3359,6 @@ static int user_notif_syscall(int nr, unsigned int flags)
 }
 
 #define USER_NOTIF_MAGIC INT_MAX
-
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- */
-#ifndef __ANDROID__
 TEST(user_notification_basic)
 {
 	pid_t pid;
@@ -3491,13 +3464,7 @@ TEST(user_notification_basic)
 	EXPECT_EQ(true, WIFEXITED(status));
 	EXPECT_EQ(0, WEXITSTATUS(status));
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- */
-#ifndef __ANDROID__
 TEST(user_notification_with_tsync)
 {
 	int ret;
@@ -3520,13 +3487,7 @@ TEST(user_notification_with_tsync)
 	close(ret);
 	ASSERT_LE(0, ret);
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- */
-#ifndef __ANDROID__
 TEST(user_notification_kill_in_middle)
 {
 	pid_t pid;
@@ -3569,7 +3530,6 @@ TEST(user_notification_kill_in_middle)
 	EXPECT_EQ(ret, -1);
 	EXPECT_EQ(errno, ENOENT);
 }
-#endif
 
 static int handled = -1;
 
@@ -3579,11 +3539,6 @@ static void signal_handler(int signal)
 		perror("write from signal");
 }
 
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- */
-#ifndef __ANDROID__
 TEST(user_notification_signal)
 {
 	pid_t pid;
@@ -3658,13 +3613,7 @@ TEST(user_notification_signal)
 	EXPECT_EQ(true, WIFEXITED(status));
 	EXPECT_EQ(0, WEXITSTATUS(status));
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- */
-#ifndef __ANDROID__
 TEST(user_notification_closed_listener)
 {
 	pid_t pid;
@@ -3697,15 +3646,7 @@ TEST(user_notification_closed_listener)
 	EXPECT_EQ(true, WIFEXITED(status));
 	EXPECT_EQ(0, WEXITSTATUS(status));
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- * unshare(CLONE_NEWUSER) returns EINVAL with Android
- * unshare(CLONE_NEWPID) returns EINVAL with Android
- */
-#ifndef __ANDROID__
 /*
  * Check that a pid in a child namespace still shows up as valid in ours.
  */
@@ -3745,14 +3686,7 @@ TEST(user_notification_child_pid_ns)
 	EXPECT_EQ(0, WEXITSTATUS(status));
 	close(listener);
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- * unshare(CLONE_NEWPID) returns EINVAL with Android
- */
-#ifndef __ANDROID__
 /*
  * Check that a pid in a sibling (i.e. unrelated) namespace shows up as 0, i.e.
  * invalid.
@@ -3776,7 +3710,12 @@ TEST(user_notification_sibling_pid_ns)
 	ASSERT_GE(pid, 0);
 
 	if (pid == 0) {
-		ASSERT_EQ(unshare(CLONE_NEWPID), 0);
+		ASSERT_EQ(unshare(CLONE_NEWPID), 0) {
+			if (errno == EPERM)
+				SKIP(return, "CLONE_NEWPID requires CAP_SYS_ADMIN");
+			else if (errno == EINVAL)
+				SKIP(return, "CLONE_NEWPID is invalid (missing CONFIG_PID_NS?)");
+		}
 
 		pid2 = fork();
 		ASSERT_GE(pid2, 0);
@@ -3794,6 +3733,8 @@ TEST(user_notification_sibling_pid_ns)
 	ASSERT_EQ(unshare(CLONE_NEWPID), 0) {
 		if (errno == EPERM)
 			SKIP(return, "CLONE_NEWPID requires CAP_SYS_ADMIN");
+		else if (errno == EINVAL)
+			SKIP(return, "CLONE_NEWPID is invalid (missing CONFIG_PID_NS?)");
 	}
 	ASSERT_EQ(errno, 0);
 
@@ -3826,14 +3767,7 @@ TEST(user_notification_sibling_pid_ns)
 	EXPECT_EQ(true, WIFEXITED(status));
 	EXPECT_EQ(0, WEXITSTATUS(status));
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- * unshare(CLONE_NEWUSER) returns EINVAL with Android
- */
-#ifndef __ANDROID__
 TEST(user_notification_fault_recv)
 {
 	pid_t pid;
@@ -3874,13 +3808,7 @@ TEST(user_notification_fault_recv)
 	EXPECT_EQ(true, WIFEXITED(status));
 	EXPECT_EQ(0, WEXITSTATUS(status));
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_GET_NOTIF_SIZES not compatible < 5.0
- */
-#ifndef __ANDROID__
 TEST(seccomp_get_notif_sizes)
 {
 	struct seccomp_notif_sizes sizes;
@@ -3889,13 +3817,7 @@ TEST(seccomp_get_notif_sizes)
 	EXPECT_EQ(sizes.seccomp_notif, sizeof(struct seccomp_notif));
 	EXPECT_EQ(sizes.seccomp_notif_resp, sizeof(struct seccomp_notif_resp));
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- */
-#ifndef __ANDROID__
 TEST(user_notification_continue)
 {
 	pid_t pid;
@@ -3981,13 +3903,7 @@ skip:
 		}
 	}
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- */
-#ifndef __ANDROID__
 TEST(user_notification_filter_empty)
 {
 	pid_t pid;
@@ -4003,6 +3919,9 @@ TEST(user_notification_filter_empty)
 	ASSERT_EQ(0, ret) {
 		TH_LOG("Kernel does not support PR_SET_NO_NEW_PRIVS!");
 	}
+
+	if (__NR_clone3 < 0)
+		SKIP(return, "Test not built with clone3 support");
 
 	pid = sys_clone3(&args, sizeof(args));
 	ASSERT_GE(pid, 0);
@@ -4036,13 +3955,61 @@ TEST(user_notification_filter_empty)
 	EXPECT_GT(poll(&pollfd, 1, 2000), 0);
 	EXPECT_GT((pollfd.revents & POLLHUP) ?: 0, 0);
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- */
-#ifndef __ANDROID__
+TEST(user_ioctl_notification_filter_empty)
+{
+	pid_t pid;
+	long ret;
+	int status, p[2];
+	struct __clone_args args = {
+		.flags = CLONE_FILES,
+		.exit_signal = SIGCHLD,
+	};
+	struct seccomp_notif req = {};
+
+	ret = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+	ASSERT_EQ(0, ret) {
+		TH_LOG("Kernel does not support PR_SET_NO_NEW_PRIVS!");
+	}
+
+	if (__NR_clone3 < 0)
+		SKIP(return, "Test not built with clone3 support");
+
+	ASSERT_EQ(0, pipe(p));
+
+	pid = sys_clone3(&args, sizeof(args));
+	ASSERT_GE(pid, 0);
+
+	if (pid == 0) {
+		int listener;
+
+		listener = user_notif_syscall(__NR_mknodat, SECCOMP_FILTER_FLAG_NEW_LISTENER);
+		if (listener < 0)
+			_exit(EXIT_FAILURE);
+
+		if (dup2(listener, 200) != 200)
+			_exit(EXIT_FAILURE);
+		close(p[1]);
+		close(listener);
+		sleep(1);
+
+		_exit(EXIT_SUCCESS);
+	}
+	if (read(p[0], &status, 1) != 0)
+		_exit(EXIT_SUCCESS);
+	close(p[0]);
+	/*
+	 * The seccomp filter has become unused so we should be notified once
+	 * the kernel gets around to cleaning up task struct.
+	 */
+	EXPECT_EQ(ioctl(200, SECCOMP_IOCTL_NOTIF_RECV, &req), -1);
+	EXPECT_EQ(errno, ENOENT);
+
+	EXPECT_EQ(waitpid(pid, &status, 0), pid);
+	EXPECT_EQ(true, WIFEXITED(status));
+	EXPECT_EQ(0, WEXITSTATUS(status));
+}
+
 static void *do_thread(void *data)
 {
 	return NULL;
@@ -4063,6 +4030,9 @@ TEST(user_notification_filter_empty_threaded)
 	ASSERT_EQ(0, ret) {
 		TH_LOG("Kernel does not support PR_SET_NO_NEW_PRIVS!");
 	}
+
+	if (__NR_clone3 < 0)
+		SKIP(return, "Test not built with clone3 support");
 
 	pid = sys_clone3(&args, sizeof(args));
 	ASSERT_GE(pid, 0);
@@ -4128,15 +4098,17 @@ TEST(user_notification_filter_empty_threaded)
 	EXPECT_GT(poll(&pollfd, 1, 2000), 0);
 	EXPECT_GT((pollfd.revents & POLLHUP) ?: 0, 0);
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_ADDED_FLAG_SEND not compatible < 5.14
- * SECCOMP_IOCTL_NOTIF_ADDFD not comptible < 5.9
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- */
-#ifndef __ANDROID__
+
+int get_next_fd(int prev_fd)
+{
+	for (int i = prev_fd + 1; i < FD_SETSIZE; ++i) {
+		if (fcntl(i, F_GETFD) == -1)
+			return i;
+	}
+	_exit(EXIT_FAILURE);
+}
+
 TEST(user_notification_addfd)
 {
 	pid_t pid;
@@ -4153,7 +4125,7 @@ TEST(user_notification_addfd)
 	/* There may be arbitrary already-open fds at test start. */
 	memfd = memfd_create("test", 0);
 	ASSERT_GE(memfd, 0);
-	nextfd = memfd + 1;
+	nextfd = get_next_fd(memfd);
 
 	ret = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
 	ASSERT_EQ(0, ret) {
@@ -4164,7 +4136,8 @@ TEST(user_notification_addfd)
 	/* Check that the basic notification machinery works */
 	listener = user_notif_syscall(__NR_getppid,
 				      SECCOMP_FILTER_FLAG_NEW_LISTENER);
-	ASSERT_EQ(listener, nextfd++);
+	ASSERT_EQ(listener, nextfd);
+	nextfd = get_next_fd(nextfd);
 
 	pid = fork();
 	ASSERT_GE(pid, 0);
@@ -4219,14 +4192,16 @@ TEST(user_notification_addfd)
 
 	/* Verify we can set an arbitrary remote fd */
 	fd = ioctl(listener, SECCOMP_IOCTL_NOTIF_ADDFD, &addfd);
-	EXPECT_EQ(fd, nextfd++);
+	EXPECT_EQ(fd, nextfd);
+	nextfd = get_next_fd(nextfd);
 	EXPECT_EQ(filecmp(getpid(), pid, memfd, fd), 0);
 
 	/* Verify we can set an arbitrary remote fd with large size */
 	memset(&big, 0x0, sizeof(big));
 	big.addfd = addfd;
 	fd = ioctl(listener, SECCOMP_IOCTL_NOTIF_ADDFD_BIG, &big);
-	EXPECT_EQ(fd, nextfd++);
+	EXPECT_EQ(fd, nextfd);
+	nextfd = get_next_fd(nextfd);
 
 	/* Verify we can set a specific remote fd */
 	addfd.newfd = 42;
@@ -4264,7 +4239,8 @@ TEST(user_notification_addfd)
 	 * Child has earlier "low" fds and now 42, so we expect the next
 	 * lowest available fd to be assigned here.
 	 */
-	EXPECT_EQ(fd, nextfd++);
+	EXPECT_EQ(fd, nextfd);
+	nextfd = get_next_fd(nextfd);
 	ASSERT_EQ(filecmp(getpid(), pid, memfd, fd), 0);
 
 	/*
@@ -4294,15 +4270,7 @@ TEST(user_notification_addfd)
 
 	close(memfd);
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_ADDED_FLAG_SEND not compatible < 5.14
- * SECCOMP_IOCTL_NOTIF_ADDFD not comptible < 5.9
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- */
-#ifndef __ANDROID__
 TEST(user_notification_addfd_rlimit)
 {
 	pid_t pid;
@@ -4372,7 +4340,61 @@ TEST(user_notification_addfd_rlimit)
 
 	close(memfd);
 }
+
+#ifndef SECCOMP_USER_NOTIF_FD_SYNC_WAKE_UP
+#define SECCOMP_USER_NOTIF_FD_SYNC_WAKE_UP (1UL << 0)
+#define SECCOMP_IOCTL_NOTIF_SET_FLAGS  SECCOMP_IOW(4, __u64)
 #endif
+
+TEST(user_notification_sync)
+{
+	struct seccomp_notif req = {};
+	struct seccomp_notif_resp resp = {};
+	int status, listener;
+	pid_t pid;
+	long ret;
+
+	ret = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+	ASSERT_EQ(0, ret) {
+		TH_LOG("Kernel does not support PR_SET_NO_NEW_PRIVS!");
+	}
+
+	listener = user_notif_syscall(__NR_getppid,
+				      SECCOMP_FILTER_FLAG_NEW_LISTENER);
+	ASSERT_GE(listener, 0);
+
+	/* Try to set invalid flags. */
+	EXPECT_SYSCALL_RETURN(-EINVAL,
+		ioctl(listener, SECCOMP_IOCTL_NOTIF_SET_FLAGS, 0xffffffff, 0));
+
+	ASSERT_EQ(ioctl(listener, SECCOMP_IOCTL_NOTIF_SET_FLAGS,
+			SECCOMP_USER_NOTIF_FD_SYNC_WAKE_UP, 0), 0);
+
+	pid = fork();
+	ASSERT_GE(pid, 0);
+	if (pid == 0) {
+		ret = syscall(__NR_getppid);
+		ASSERT_EQ(ret, USER_NOTIF_MAGIC) {
+			_exit(1);
+		}
+		_exit(0);
+	}
+
+	req.pid = 0;
+	ASSERT_EQ(ioctl(listener, SECCOMP_IOCTL_NOTIF_RECV, &req), 0);
+
+	ASSERT_EQ(req.data.nr,  __NR_getppid);
+
+	resp.id = req.id;
+	resp.error = 0;
+	resp.val = USER_NOTIF_MAGIC;
+	resp.flags = 0;
+	ASSERT_EQ(ioctl(listener, SECCOMP_IOCTL_NOTIF_SEND, &resp), 0);
+
+	ASSERT_EQ(waitpid(pid, &status, 0), pid);
+	ASSERT_EQ(status, 0);
+}
+
 
 /* Make sure PTRACE_O_SUSPEND_SECCOMP requires CAP_SYS_ADMIN. */
 FIXTURE(O_SUSPEND_SECCOMP) {
@@ -4488,13 +4510,6 @@ static char get_proc_stat(struct __test_metadata *_metadata, pid_t pid)
 	return status;
 }
 
-/*
- * b/147676645
- * SECCOMP_IOCTL_NOTIF_RECV not compatible < 5.0
- * SECCOMP_IOCTL_NOTIF_SEND not compatible < 5.0
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- */
-#ifndef __ANDROID__
 TEST(user_notification_fifo)
 {
 	struct seccomp_notif_resp resp = {};
@@ -4573,7 +4588,6 @@ restart_wait:
 		EXPECT_EQ(0, WEXITSTATUS(status));
 	}
 }
-#endif
 
 /* get_proc_syscall - Get the syscall in progress for a given pid
  *
@@ -4598,12 +4612,6 @@ static long get_proc_syscall(struct __test_metadata *_metadata, int pid)
 	return ret;
 }
 
-/*
- * b/147676645
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- * SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV not compatible < 5.19
- */
-#ifndef __ANDROID__
 /* Ensure non-fatal signals prior to receive are unmodified */
 TEST(user_notification_wait_killable_pre_notification)
 {
@@ -4673,16 +4681,7 @@ TEST(user_notification_wait_killable_pre_notification)
 
 	EXPECT_EQ(read(sk_pair[0], &c, 1), 1);
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_IOCTL_NOTIF_RECV not compatible < 5.0
- * SECCOMP_IOCTL_NOTIF_SEND not compatible < 5.0
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- * SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV not compatible < 5.19
- */
-#ifndef __ANDROID__
 /* Ensure non-fatal signals after receive are blocked */
 TEST(user_notification_wait_killable)
 {
@@ -4761,15 +4760,7 @@ TEST(user_notification_wait_killable)
 	EXPECT_EQ(true, WIFEXITED(status));
 	EXPECT_EQ(0, WEXITSTATUS(status));
 }
-#endif
 
-/*
- * b/147676645
- * SECCOMP_IOCTL_NOTIF_RECV not compatible < 5.0
- * SECCOMP_FILTER_FLAG_NEW_LISTENER not compatible < 5.0
- * SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV not compatible < 5.19
- */
-#ifndef __ANDROID__
 /* Ensure fatal signals after receive are not blocked */
 TEST(user_notification_wait_killable_fatal)
 {
@@ -4819,7 +4810,83 @@ TEST(user_notification_wait_killable_fatal)
 	EXPECT_EQ(true, WIFSIGNALED(status));
 	EXPECT_EQ(SIGTERM, WTERMSIG(status));
 }
-#endif
+
+struct tsync_vs_thread_leader_args {
+	pthread_t leader;
+};
+
+static void *tsync_vs_dead_thread_leader_sibling(void *_args)
+{
+	struct sock_filter allow_filter[] = {
+		BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_ALLOW),
+	};
+	struct sock_fprog allow_prog = {
+		.len = (unsigned short)ARRAY_SIZE(allow_filter),
+		.filter = allow_filter,
+	};
+	struct tsync_vs_thread_leader_args *args = _args;
+	void *retval;
+	long ret;
+
+	ret = pthread_join(args->leader, &retval);
+	if (ret)
+		exit(1);
+	if (retval != _args)
+		exit(2);
+	ret = seccomp(SECCOMP_SET_MODE_FILTER, SECCOMP_FILTER_FLAG_TSYNC, &allow_prog);
+	if (ret)
+		exit(3);
+
+	exit(0);
+}
+
+/*
+ * Ensure that a dead thread leader doesn't prevent installing new filters with
+ * SECCOMP_FILTER_FLAG_TSYNC from other threads.
+ */
+TEST(tsync_vs_dead_thread_leader)
+{
+	int status;
+	pid_t pid;
+	long ret;
+
+	ret = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+	ASSERT_EQ(0, ret) {
+		TH_LOG("Kernel does not support PR_SET_NO_NEW_PRIVS!");
+	}
+
+	pid = fork();
+	ASSERT_GE(pid, 0);
+
+	if (pid == 0) {
+		struct sock_filter allow_filter[] = {
+			BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_ALLOW),
+		};
+		struct sock_fprog allow_prog = {
+			.len = (unsigned short)ARRAY_SIZE(allow_filter),
+			.filter = allow_filter,
+		};
+		struct  tsync_vs_thread_leader_args *args;
+		pthread_t sibling;
+
+		args = malloc(sizeof(*args));
+		ASSERT_NE(NULL, args);
+		args->leader = pthread_self();
+
+		ret = pthread_create(&sibling, NULL,
+				     tsync_vs_dead_thread_leader_sibling, args);
+		ASSERT_EQ(0, ret);
+
+		/* Install a new filter just to the leader thread. */
+		ret = seccomp(SECCOMP_SET_MODE_FILTER, 0, &allow_prog);
+		ASSERT_EQ(0, ret);
+		pthread_exit(args);
+		exit(1);
+	}
+
+	EXPECT_EQ(pid, waitpid(pid, &status, 0));
+	EXPECT_EQ(0, status);
+}
 
 /*
  * TODO:

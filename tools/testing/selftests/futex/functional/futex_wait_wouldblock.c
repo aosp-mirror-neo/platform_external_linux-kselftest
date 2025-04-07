@@ -39,7 +39,7 @@ void usage(char *prog)
 
 int main(int argc, char *argv[])
 {
-	struct timespec64 to = {.tv_sec = 0, .tv_nsec = timeout_ns};
+	struct timespec to = {.tv_sec = 0, .tv_nsec = timeout_ns};
 	futex_t f1 = FUTEX_INITIALIZER;
 	int res, ret = RET_PASS;
 	int c;
@@ -83,8 +83,8 @@ int main(int argc, char *argv[])
 		ksft_test_result_pass("futex_wait\n");
 	}
 
-	if (gettime64(CLOCK_MONOTONIC, &to)) {
-		error("gettime64 failed\n", errno);
+	if (clock_gettime(CLOCK_MONOTONIC, &to)) {
+		error("clock_gettime failed\n", errno);
 		return errno;
 	}
 
@@ -98,15 +98,10 @@ int main(int argc, char *argv[])
 	info("Calling futex_waitv on f1: %u @ %p with val=%u\n", f1, &f1, f1+1);
 	res = futex_waitv(&waitv, 1, 0, &to, CLOCK_MONOTONIC);
 	if (!res || errno != EWOULDBLOCK) {
-		if (errno == ENOSYS) {
-			ksft_test_result_skip("futex_waitv returned %d\n",
-					      errno);
-		} else {
-			ksft_test_result_fail("futex_waitv returned: %d %s\n",
-					      res ? errno : res,
-					      res ? strerror(errno) : "");
-			ret = RET_FAIL;
-		}
+		ksft_test_result_pass("futex_waitv returned: %d %s\n",
+				      res ? errno : res,
+				      res ? strerror(errno) : "");
+		ret = RET_FAIL;
 	} else {
 		ksft_test_result_pass("futex_waitv\n");
 	}
