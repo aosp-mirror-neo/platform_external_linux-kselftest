@@ -260,16 +260,16 @@ int validate_set_offset(void)
 	if (set_offset(-NSEC_PER_SEC - 1, 1))
 		return -1;
 
-	if (set_offset(5 * NSEC_PER_SEC, 1))
+	if (set_offset(5 * (long long) NSEC_PER_SEC, 1))
 		return -1;
 
-	if (set_offset(-5 * NSEC_PER_SEC, 1))
+	if (set_offset(-5 * (long long) NSEC_PER_SEC, 1))
 		return -1;
 
-	if (set_offset(5 * NSEC_PER_SEC + NSEC_PER_SEC / 2, 1))
+	if (set_offset(5 * (long long) NSEC_PER_SEC + NSEC_PER_SEC / 2, 1))
 		return -1;
 
-	if (set_offset(-5 * NSEC_PER_SEC - NSEC_PER_SEC / 2, 1))
+	if (set_offset(-5 * (long long) NSEC_PER_SEC - NSEC_PER_SEC / 2, 1))
 		return -1;
 
 	if (set_offset(USEC_PER_SEC - 1, 0))
@@ -287,10 +287,10 @@ int validate_set_offset(void)
 	if (set_offset(-5 * USEC_PER_SEC, 0))
 		return -1;
 
-	if (set_offset(5 * USEC_PER_SEC + USEC_PER_SEC / 2, 0))
+	if (set_offset(5 * (long long) USEC_PER_SEC + USEC_PER_SEC / 2, 0))
 		return -1;
 
-	if (set_offset(-5 * USEC_PER_SEC - USEC_PER_SEC / 2, 0))
+	if (set_offset(-5 * (long long) USEC_PER_SEC - USEC_PER_SEC / 2, 0))
 		return -1;
 
 	/* Test invalid values */
