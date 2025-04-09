@@ -1,0 +1,76 @@
+From 90c3166229daf84da5773af41fa87b5733914eb8 Mon Sep 17 00:00:00 2001
+From: Edward Liaw <edliaw@google.com>
+Date: Tue, 28 Jan 2025 01:05:05 +0000
+Subject: [PATCH 2/9] ANDROID: futex/functional: skip tests using sysV shmem
+ functions
+
+getshm is not implemented in Android.  It relies on System V shared
+memory memory functions which are disallowed by selinux policies.
+
+Bug: 234151152
+Test: mma
+Signed-off-by: Edward Liaw <edliaw@google.com>
+---
+ tools/testing/selftests/futex/functional/futex_wait.c  | 7 ++++++-
+ tools/testing/selftests/futex/functional/futex_waitv.c | 5 +++++
+ 2 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/tools/testing/selftests/futex/functional/futex_wait.c b/tools/testing/selftests/futex/functional/futex_wait.c
+index 685140d9b93d..8338c23aba62 100644
+--- a/tools/testing/selftests/futex/functional/futex_wait.c
++++ b/tools/testing/selftests/futex/functional/futex_wait.c
+@@ -94,6 +94,9 @@ int main(int argc, char *argv[])
+ 	}
+ 
+ 	/* Testing an anon page shared memory */
++#ifdef __ANDROID__
++	ksft_test_result_skip("shmget not implemented on Android\n");
++#else
+ 	shm_id = shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0666);
+ 	if (shm_id < 0) {
+ 		perror("shmget");
+@@ -120,7 +123,7 @@ int main(int argc, char *argv[])
+ 	} else {
+ 		ksft_test_result_pass("futex_wake shared (page anon) succeeds\n");
+ 	}
+-
++#endif
+ 
+ 	/* Testing a file backed shared memory */
+ 	fd = open(SHM_PATH, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+@@ -161,7 +164,9 @@ int main(int argc, char *argv[])
+ 	}
+ 
+ 	/* Freeing resources */
++#ifndef __ANDROID__
+ 	shmdt(shared_data);
++#endif
+ 	munmap(shm, sizeof(f_private));
+ 	remove(SHM_PATH);
+ 	close(fd);
+diff --git a/tools/testing/selftests/futex/functional/futex_waitv.c b/tools/testing/selftests/futex/functional/futex_waitv.c
+index a94337f677e1..5c6630be2586 100644
+--- a/tools/testing/selftests/futex/functional/futex_waitv.c
++++ b/tools/testing/selftests/futex/functional/futex_waitv.c
+@@ -110,6 +110,10 @@ int main(int argc, char *argv[])
+ 	}
+ 
+ 	/* Shared waitv */
++#ifdef __ANDROID__
++	ksft_test_result_skip("shmget not implemented on Android\n");
++	ksft_test_result_skip("shmget not implemented on Android\n");
++#else
+ 	for (i = 0; i < NR_FUTEXES; i++) {
+ 		int shm_id = shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0666);
+ 
+@@ -171,6 +175,7 @@ int main(int argc, char *argv[])
+ 		error("gettime64 failed\n", errno);
+ 
+ 	to.tv_sec++;
++#endif
+ 
+ 	res = futex_waitv(waitv, NR_FUTEXES, 0, &to, CLOCK_MONOTONIC);
+ 	if (res == EINVAL) {
+-- 
+2.49.0.504.g3bcea36a83-goog
+

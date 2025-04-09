@@ -17,6 +17,8 @@
  *
  *****************************************************************************/
 
+#define _GNU_SOURCE
+
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
@@ -48,7 +50,7 @@ static int locked;
 
 struct thread_arg {
 	long id;
-	struct timespec64 *timeout;
+	struct timespec *timeout;
 	int lock;
 	int ret;
 };
@@ -281,7 +283,7 @@ int unit_test(int broadcast, long lock, int third_party_owner, long timeout_ns)
 	struct thread_arg blocker_arg = THREAD_ARG_INITIALIZER;
 	struct thread_arg waker_arg = THREAD_ARG_INITIALIZER;
 	pthread_t waiter[THREAD_MAX], waker, blocker;
-	struct timespec64 ts, *tsp = NULL;
+	struct timespec ts, *tsp = NULL;
 	struct thread_arg args[THREAD_MAX];
 	int *waiter_ret;
 	int i, ret = RET_PASS;
@@ -290,7 +292,7 @@ int unit_test(int broadcast, long lock, int third_party_owner, long timeout_ns)
 		time_t secs;
 
 		info("timeout_ns = %ld\n", timeout_ns);
-		ret = gettime64(CLOCK_MONOTONIC, &ts);
+		ret = clock_gettime(CLOCK_MONOTONIC, &ts);
 		secs = (ts.tv_nsec + timeout_ns) / 1000000000;
 		ts.tv_nsec = ((int64_t)ts.tv_nsec + timeout_ns) % 1000000000;
 		ts.tv_sec += secs;
@@ -358,6 +360,7 @@ out:
 
 int main(int argc, char *argv[])
 {
+	char *test_name;
 	int c, ret;
 
 	while ((c = getopt(argc, argv, "bchlot:v:")) != -1) {
@@ -397,6 +400,14 @@ int main(int argc, char *argv[])
 		"\tArguments: broadcast=%d locked=%d owner=%d timeout=%ldns\n",
 		broadcast, locked, owner, timeout_ns);
 
+	ret = asprintf(&test_name,
+		       "%s broadcast=%d locked=%d owner=%d timeout=%ldns",
+		       TEST_NAME, broadcast, locked, owner, timeout_ns);
+	if (ret < 0) {
+		ksft_print_msg("Failed to generate test name\n");
+		test_name = TEST_NAME;
+	}
+
 	/*
 	 * FIXME: unit_test is obsolete now that we parse options and the
 	 * various style of runs are done by run.sh - simplify the code and move
@@ -404,6 +415,6 @@ int main(int argc, char *argv[])
 	 */
 	ret = unit_test(broadcast, locked, owner, timeout_ns);
 
-	print_result(TEST_NAME, ret);
+	print_result(test_name, ret);
 	return ret;
 }

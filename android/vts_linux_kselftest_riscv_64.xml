@@ -46,15 +46,15 @@
         <option name="test-command-line" key="seccomp_seccomp_bpf_riscv_64" value="cd &ktest_dir;/*/.; ./seccomp_bpf" />
         <option name="test-command-line" key="size_get_size_riscv_64" value="cd &ktest_dir;/*/.; ./get_size" />
         <option name="test-command-line" key="splice_default_file_splice_read.sh_riscv_64" value="cd &ktest_dir;/*/.; ./default_file_splice_read.sh" />
-        <option name="test-command-line" key="timers_inconsistency-check_riscv_64" value="cd &ktest_dir;/*/.; ./inconsistency-check" />
+        <option name="test-command-line" key="timers_inconsistency_check_riscv_64" value="cd &ktest_dir;/*/.; ./inconsistency-check" />
         <option name="test-command-line" key="timers_nanosleep_riscv_64" value="cd &ktest_dir;/*/.; ./nanosleep" />
-        <option name="test-command-line" key="timers_nsleep-lat_riscv_64" value="cd &ktest_dir;/*/.; ./nsleep-lat" />
+        <option name="test-command-line" key="timers_nsleep_lat_riscv_64" value="cd &ktest_dir;/*/.; ./nsleep-lat" />
         <option name="test-command-line" key="timers_posix_timers_riscv_64" value="cd &ktest_dir;/*/.; ./posix_timers" />
         <option name="test-command-line" key="timers_raw_skew_riscv_64" value="cd &ktest_dir;/*/.; ./raw_skew" />
-        <option name="test-command-line" key="timers_set-tai_riscv_64" value="cd &ktest_dir;/*/.; ./set-tai" />
-        <option name="test-command-line" key="timers_set-timer-lat_riscv_64" value="cd &ktest_dir;/*/.; ./set-timer-lat" />
+        <option name="test-command-line" key="timers_set_tai_riscv_64" value="cd &ktest_dir;/*/.; ./set-tai" />
+        <option name="test-command-line" key="timers_set_timer_lat_riscv_64" value="cd &ktest_dir;/*/.; ./set-timer-lat" />
         <option name="test-command-line" key="timers_threadtest_riscv_64" value="cd &ktest_dir;/*/.; ./threadtest" />
-        <option name="test-command-line" key="timers_valid-adjtimex_riscv_64" value="cd &ktest_dir;/*/.; ./valid-adjtimex" />
+        <option name="test-command-line" key="timers_valid_adjtimex_riscv_64" value="cd &ktest_dir;/*/.; ./valid-adjtimex" />
         <option name="test-command-line" key="vDSO_kselftest_vdso_test_riscv_64" value="cd &ktest_dir;/*/.; ./kselftest_vdso_test" />
     </test>
 </configuration>

@@ -45,18 +45,17 @@
         <option name="test-command-line" key="seccomp_seccomp_bpf_arm_32" value="cd &ktest_dir;/*/.; ./seccomp_bpf" />
         <option name="test-command-line" key="size_get_size_arm_32" value="cd &ktest_dir;/*/.; ./get_size" />
         <option name="test-command-line" key="splice_default_file_splice_read.sh_arm_32" value="cd &ktest_dir;/*/.; ./default_file_splice_read.sh" />
-        <option name="test-command-line" key="timers_inconsistency-check_arm_32" value="cd &ktest_dir;/*/.; ./inconsistency-check" />
+        <option name="test-command-line" key="timers_inconsistency_check_arm_32" value="cd &ktest_dir;/*/.; ./inconsistency-check" />
         <option name="test-command-line" key="timers_nanosleep_arm_32" value="cd &ktest_dir;/*/.; ./nanosleep" />
-        <option name="test-command-line" key="timers_nsleep-lat_arm_32" value="cd &ktest_dir;/*/.; ./nsleep-lat" />
+        <option name="test-command-line" key="timers_nsleep_lat_arm_32" value="cd &ktest_dir;/*/.; ./nsleep-lat" />
         <option name="test-command-line" key="timers_posix_timers_arm_32" value="cd &ktest_dir;/*/.; ./posix_timers" />
         <option name="test-command-line" key="timers_raw_skew_arm_32" value="cd &ktest_dir;/*/.; ./raw_skew" />
-        <option name="test-command-line" key="timers_set-tai_arm_32" value="cd &ktest_dir;/*/.; ./set-tai" />
-        <option name="test-command-line" key="timers_set-timer-lat_arm_32" value="cd &ktest_dir;/*/.; ./set-timer-lat" />
+        <option name="test-command-line" key="timers_set_tai_arm_32" value="cd &ktest_dir;/*/.; ./set-tai" />
+        <option name="test-command-line" key="timers_set_timer_lat_arm_32" value="cd &ktest_dir;/*/.; ./set-timer-lat" />
         <option name="test-command-line" key="timers_threadtest_arm_32" value="cd &ktest_dir;/*/.; ./threadtest" />
-        <option name="test-command-line" key="timers_valid-adjtimex_arm_32" value="cd &ktest_dir;/*/.; ./valid-adjtimex" />
-        <option name="test-command-line" key="vm_mremap_dontunmap_arm_32" value="cd &ktest_dir;/*/.; ./mremap_dontunmap" />
-        <option name="test-command-line" key="vm_userfaultfd_anon_arm_32" value="cd &ktest_dir;/*/.; ./userfaultfd anon 32 99" />
-        <option name="test-command-line" key="vm_userfaultfd_shmem_arm_32" value="cd &ktest_dir;/*/.; ./userfaultfd shmem 32 99" />
+        <option name="test-command-line" key="timers_valid_adjtimex_arm_32" value="cd &ktest_dir;/*/.; ./valid-adjtimex" />
+        <option name="test-command-line" key="mm_mremap_dontunmap_arm_32" value="cd &ktest_dir;/*/.; ./mremap_dontunmap" />
+        <option name="test-command-line" key="mm_uffd_unit_tests_arm_32" value="cd &ktest_dir;/*/.; ./uffd-unit-tests" />
     </test>
 </configuration>
 
