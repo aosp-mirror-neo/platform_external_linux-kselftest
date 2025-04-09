@@ -25,11 +25,7 @@ int test(void)
 	feclearexcept(FE_DIVBYZERO|FE_INEXACT|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW);
 	asm volatile ("\n"
 	"	fld1""\n"
-#ifdef __clang__
 	"	fisttps	res16""\n"
-#else
-	"	fisttp	res16""\n"
-#endif
 	"	fld1""\n"
 	"	fisttpl	res32""\n"
 	"	fld1""\n"
@@ -49,11 +45,7 @@ int test(void)
 	feclearexcept(FE_DIVBYZERO|FE_INEXACT|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW);
 	asm volatile ("\n"
 	"	fldpi""\n"
-#ifdef __clang__
 	"	fisttps	res16""\n"
-#else
-	"	fisttp	res16""\n"
-#endif
 	"	fldpi""\n"
 	"	fisttpl	res32""\n"
 	"	fldpi""\n"
@@ -74,13 +66,7 @@ int test(void)
 	asm volatile ("\n"
 	"	fldpi""\n"
 	"	fchs""\n"
-#ifdef __clang__
 	"	fisttps	res16""\n"
-#else
-    // clang will complain: ambiguous instructions require an explicit suffix
-    // (could be 'fisttps', or 'fisttpl')
-	"	fisttp	res16""\n"
-#endif
 	"	fldpi""\n"
 	"	fchs""\n"
 	"	fisttpl	res32""\n"
@@ -102,11 +88,7 @@ int test(void)
 	feclearexcept(FE_DIVBYZERO|FE_INEXACT|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW);
 	asm volatile ("\n"
 	"	fldln2""\n"
-#ifdef __clang__
 	"	fisttps	res16""\n"
-#else
-	"	fisttp	res16""\n"
-#endif
 	"	fldln2""\n"
 	"	fisttpl	res32""\n"
 	"	fldln2""\n"
