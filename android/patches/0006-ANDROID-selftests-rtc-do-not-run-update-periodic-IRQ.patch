@@ -1,0 +1,89 @@
+From f461e9aa1ab4e6f6c47d6234e9f837d3a66e9a30 Mon Sep 17 00:00:00 2001
+From: Edward Liaw <edliaw@google.com>
+Date: Thu, 30 Jan 2025 22:52:45 +0000
+Subject: [PATCH 6/9] ANDROID: selftests/rtc: do not run update, periodic IRQ
+ tests on Android
+
+Android does not require the update or periodic IRQs from the RTC, so do
+not test this.
+
+Bug: 31578457
+Test: mma
+Signed-off-by: Edward Liaw <edliaw@google.com>
+---
+ tools/testing/selftests/rtc/rtctest.c | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/tools/testing/selftests/rtc/rtctest.c b/tools/testing/selftests/rtc/rtctest.c
+index e103097d0b5b..2df0a353b9eb 100644
+--- a/tools/testing/selftests/rtc/rtctest.c
++++ b/tools/testing/selftests/rtc/rtctest.c
+@@ -147,6 +147,10 @@ TEST_F_TIMEOUT(rtc, date_read_loop, READ_LOOP_DURATION_SEC + 2) {
+ }
+ 
+ TEST_F_TIMEOUT(rtc, uie_read, NUM_UIE + 2) {
++#ifdef __ANDROID__ // b/31578457
++	SKIP(return, "Skipping test for Android");
++#endif
++
+ 	int i, rc, irq = 0;
+ 	unsigned long data;
+ 
+@@ -176,6 +180,10 @@ TEST_F_TIMEOUT(rtc, uie_read, NUM_UIE + 2) {
+ }
+ 
+ TEST_F(rtc, uie_select) {
++#ifdef __ANDROID__ // b/31578457
++	SKIP(return, "Skipping test for Android");
++#endif
++
+ 	int i, rc, irq = 0;
+ 	unsigned long data;
+ 
+@@ -215,6 +223,10 @@ TEST_F(rtc, uie_select) {
+ }
+ 
+ TEST_F(rtc, alarm_alm_set) {
++#ifdef __ANDROID__ // b/31578457
++	SKIP(return, "Skipping test for Android");
++#endif
++
+ 	struct timeval tv = { .tv_sec = ALARM_DELTA + 2 };
+ 	unsigned long data;
+ 	struct rtc_time tm;
+@@ -282,6 +294,10 @@ TEST_F(rtc, alarm_alm_set) {
+ }
+ 
+ TEST_F(rtc, alarm_wkalm_set) {
++#ifdef __ANDROID__ // b/31578457
++	SKIP(return, "Skipping test for Android");
++#endif
++
+ 	struct timeval tv = { .tv_sec = ALARM_DELTA + 2 };
+ 	struct rtc_wkalrm alarm = { 0 };
+ 	struct rtc_time tm;
+@@ -345,6 +361,10 @@ TEST_F(rtc, alarm_wkalm_set) {
+ }
+ 
+ TEST_F_TIMEOUT(rtc, alarm_alm_set_minute, 65) {
++#ifdef __ANDROID__ // b/31578457
++	SKIP(return, "Skipping test for Android");
++#endif
++
+ 	struct timeval tv = { .tv_sec = 62 };
+ 	unsigned long data;
+ 	struct rtc_time tm;
+@@ -412,6 +432,10 @@ TEST_F_TIMEOUT(rtc, alarm_alm_set_minute, 65) {
+ }
+ 
+ TEST_F_TIMEOUT(rtc, alarm_wkalm_set_minute, 65) {
++#ifdef __ANDROID__ // b/31578457
++	SKIP(return, "Skipping test for Android");
++#endif
++
+ 	struct timeval tv = { .tv_sec = 62 };
+ 	struct rtc_wkalrm alarm = { 0 };
+ 	struct rtc_time tm;
+-- 
+2.49.0.504.g3bcea36a83-goog
+

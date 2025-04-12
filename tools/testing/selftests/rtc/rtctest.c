@@ -25,13 +25,18 @@
 
 static char *rtc_file = "/dev/rtc0";
 
+enum rtc_alarm_state {
+	RTC_ALARM_UNKNOWN,
+	RTC_ALARM_ENABLED,
+	RTC_ALARM_DISABLED,
+};
+
 FIXTURE(rtc) {
 	int fd;
 };
 
 FIXTURE_SETUP(rtc) {
 	self->fd = open(rtc_file, O_RDONLY);
-	ASSERT_NE(-1, self->fd);
 }
 
 FIXTURE_TEARDOWN(rtc) {
@@ -41,6 +46,10 @@ FIXTURE_TEARDOWN(rtc) {
 TEST_F(rtc, date_read) {
 	int rc;
 	struct rtc_time rtc_tm;
+
+	if (self->fd == -1 && errno == ENOENT)
+		SKIP(return, "Skipping test since %s does not exist", rtc_file);
+	ASSERT_NE(-1, self->fd);
 
 	/* Read the RTC time/date */
 	rc = ioctl(self->fd, RTC_RD_TIME, &rtc_tm);
@@ -79,11 +88,33 @@ static void nanosleep_with_retries(long ns)
 	}
 }
 
+static enum rtc_alarm_state get_rtc_alarm_state(int fd)
+{
+	struct rtc_param param = { 0 };
+	int rc;
+
+	/* Validate kernel reflects unsupported RTC alarm state */
+	param.param = RTC_PARAM_FEATURES;
+	param.index = 0;
+	rc = ioctl(fd, RTC_PARAM_GET, &param);
+	if (rc < 0)
+		return RTC_ALARM_UNKNOWN;
+
+	if ((param.uvalue & _BITUL(RTC_FEATURE_ALARM)) == 0)
+		return RTC_ALARM_DISABLED;
+
+	return RTC_ALARM_ENABLED;
+}
+
 TEST_F_TIMEOUT(rtc, date_read_loop, READ_LOOP_DURATION_SEC + 2) {
 	int rc;
 	long iter_count = 0;
 	struct rtc_time rtc_tm;
 	time_t start_rtc_read, prev_rtc_read;
+
+	if (self->fd == -1 && errno == ENOENT)
+		SKIP(return, "Skipping test since %s does not exist", rtc_file);
+	ASSERT_NE(-1, self->fd);
 
 	TH_LOG("Continuously reading RTC time for %ds (with %dms breaks after every read).",
 	       READ_LOOP_DURATION_SEC, READ_LOOP_SLEEP_MS);
@@ -115,10 +146,17 @@ TEST_F_TIMEOUT(rtc, date_read_loop, READ_LOOP_DURATION_SEC + 2) {
 	TH_LOG("Performed %ld RTC time reads.", iter_count);
 }
 
-#ifndef __ANDROID__ // b/31578457
 TEST_F_TIMEOUT(rtc, uie_read, NUM_UIE + 2) {
+#ifdef __ANDROID__ // b/31578457
+	SKIP(return, "Skipping test for Android");
+#endif
+
 	int i, rc, irq = 0;
 	unsigned long data;
+
+	if (self->fd == -1 && errno == ENOENT)
+		SKIP(return, "Skipping test since %s does not exist", rtc_file);
+	ASSERT_NE(-1, self->fd);
 
 	/* Turn on update interrupts */
 	rc = ioctl(self->fd, RTC_UIE_ON, 0);
@@ -142,8 +180,16 @@ TEST_F_TIMEOUT(rtc, uie_read, NUM_UIE + 2) {
 }
 
 TEST_F(rtc, uie_select) {
+#ifdef __ANDROID__ // b/31578457
+	SKIP(return, "Skipping test for Android");
+#endif
+
 	int i, rc, irq = 0;
 	unsigned long data;
+
+	if (self->fd == -1 && errno == ENOENT)
+		SKIP(return, "Skipping test since %s does not exist", rtc_file);
+	ASSERT_NE(-1, self->fd);
 
 	/* Turn on update interrupts */
 	rc = ioctl(self->fd, RTC_UIE_ON, 0);
@@ -177,12 +223,25 @@ TEST_F(rtc, uie_select) {
 }
 
 TEST_F(rtc, alarm_alm_set) {
+#ifdef __ANDROID__ // b/31578457
+	SKIP(return, "Skipping test for Android");
+#endif
+
 	struct timeval tv = { .tv_sec = ALARM_DELTA + 2 };
 	unsigned long data;
 	struct rtc_time tm;
 	fd_set readfds;
 	time_t secs, new;
 	int rc;
+	enum rtc_alarm_state alarm_state = RTC_ALARM_UNKNOWN;
+
+	if (self->fd == -1 && errno == ENOENT)
+		SKIP(return, "Skipping test since %s does not exist", rtc_file);
+	ASSERT_NE(-1, self->fd);
+
+	alarm_state = get_rtc_alarm_state(self->fd);
+	if (alarm_state == RTC_ALARM_DISABLED)
+		SKIP(return, "Skipping test since alarms are not supported.");
 
 	rc = ioctl(self->fd, RTC_RD_TIME, &tm);
 	ASSERT_NE(-1, rc);
@@ -192,6 +251,11 @@ TEST_F(rtc, alarm_alm_set) {
 
 	rc = ioctl(self->fd, RTC_ALM_SET, &tm);
 	if (rc == -1) {
+		/*
+		 * Report error if rtc alarm was enabled. Fallback to check ioctl
+		 * error number if rtc alarm state is unknown.
+		 */
+		ASSERT_EQ(RTC_ALARM_UNKNOWN, alarm_state);
 		ASSERT_EQ(EINVAL, errno);
 		TH_LOG("skip alarms are not supported.");
 		return;
@@ -230,6 +294,10 @@ TEST_F(rtc, alarm_alm_set) {
 }
 
 TEST_F(rtc, alarm_wkalm_set) {
+#ifdef __ANDROID__ // b/31578457
+	SKIP(return, "Skipping test for Android");
+#endif
+
 	struct timeval tv = { .tv_sec = ALARM_DELTA + 2 };
 	struct rtc_wkalrm alarm = { 0 };
 	struct rtc_time tm;
@@ -237,6 +305,15 @@ TEST_F(rtc, alarm_wkalm_set) {
 	fd_set readfds;
 	time_t secs, new;
 	int rc;
+	enum rtc_alarm_state alarm_state = RTC_ALARM_UNKNOWN;
+
+	if (self->fd == -1 && errno == ENOENT)
+		SKIP(return, "Skipping test since %s does not exist", rtc_file);
+	ASSERT_NE(-1, self->fd);
+
+	alarm_state = get_rtc_alarm_state(self->fd);
+	if (alarm_state == RTC_ALARM_DISABLED)
+		SKIP(return, "Skipping test since alarms are not supported.");
 
 	rc = ioctl(self->fd, RTC_RD_TIME, &alarm.time);
 	ASSERT_NE(-1, rc);
@@ -248,6 +325,11 @@ TEST_F(rtc, alarm_wkalm_set) {
 
 	rc = ioctl(self->fd, RTC_WKALM_SET, &alarm);
 	if (rc == -1) {
+		/*
+		 * Report error if rtc alarm was enabled. Fallback to check ioctl
+		 * error number if rtc alarm state is unknown.
+		 */
+		ASSERT_EQ(RTC_ALARM_UNKNOWN, alarm_state);
 		ASSERT_EQ(EINVAL, errno);
 		TH_LOG("skip alarms are not supported.");
 		return;
@@ -279,12 +361,25 @@ TEST_F(rtc, alarm_wkalm_set) {
 }
 
 TEST_F_TIMEOUT(rtc, alarm_alm_set_minute, 65) {
+#ifdef __ANDROID__ // b/31578457
+	SKIP(return, "Skipping test for Android");
+#endif
+
 	struct timeval tv = { .tv_sec = 62 };
 	unsigned long data;
 	struct rtc_time tm;
 	fd_set readfds;
 	time_t secs, new;
 	int rc;
+	enum rtc_alarm_state alarm_state = RTC_ALARM_UNKNOWN;
+
+	if (self->fd == -1 && errno == ENOENT)
+		SKIP(return, "Skipping test since %s does not exist", rtc_file);
+	ASSERT_NE(-1, self->fd);
+
+	alarm_state = get_rtc_alarm_state(self->fd);
+	if (alarm_state == RTC_ALARM_DISABLED)
+		SKIP(return, "Skipping test since alarms are not supported.");
 
 	rc = ioctl(self->fd, RTC_RD_TIME, &tm);
 	ASSERT_NE(-1, rc);
@@ -294,6 +389,11 @@ TEST_F_TIMEOUT(rtc, alarm_alm_set_minute, 65) {
 
 	rc = ioctl(self->fd, RTC_ALM_SET, &tm);
 	if (rc == -1) {
+		/*
+		 * Report error if rtc alarm was enabled. Fallback to check ioctl
+		 * error number if rtc alarm state is unknown.
+		 */
+		ASSERT_EQ(RTC_ALARM_UNKNOWN, alarm_state);
 		ASSERT_EQ(EINVAL, errno);
 		TH_LOG("skip alarms are not supported.");
 		return;
@@ -332,6 +432,10 @@ TEST_F_TIMEOUT(rtc, alarm_alm_set_minute, 65) {
 }
 
 TEST_F_TIMEOUT(rtc, alarm_wkalm_set_minute, 65) {
+#ifdef __ANDROID__ // b/31578457
+	SKIP(return, "Skipping test for Android");
+#endif
+
 	struct timeval tv = { .tv_sec = 62 };
 	struct rtc_wkalrm alarm = { 0 };
 	struct rtc_time tm;
@@ -339,6 +443,15 @@ TEST_F_TIMEOUT(rtc, alarm_wkalm_set_minute, 65) {
 	fd_set readfds;
 	time_t secs, new;
 	int rc;
+	enum rtc_alarm_state alarm_state = RTC_ALARM_UNKNOWN;
+
+	if (self->fd == -1 && errno == ENOENT)
+		SKIP(return, "Skipping test since %s does not exist", rtc_file);
+	ASSERT_NE(-1, self->fd);
+
+	alarm_state = get_rtc_alarm_state(self->fd);
+	if (alarm_state == RTC_ALARM_DISABLED)
+		SKIP(return, "Skipping test since alarms are not supported.");
 
 	rc = ioctl(self->fd, RTC_RD_TIME, &alarm.time);
 	ASSERT_NE(-1, rc);
@@ -350,6 +463,11 @@ TEST_F_TIMEOUT(rtc, alarm_wkalm_set_minute, 65) {
 
 	rc = ioctl(self->fd, RTC_WKALM_SET, &alarm);
 	if (rc == -1) {
+		/*
+		 * Report error if rtc alarm was enabled. Fallback to check ioctl
+		 * error number if rtc alarm state is unknown.
+		 */
+		ASSERT_EQ(RTC_ALARM_UNKNOWN, alarm_state);
 		ASSERT_EQ(EINVAL, errno);
 		TH_LOG("skip alarms are not supported.");
 		return;
@@ -379,17 +497,11 @@ TEST_F_TIMEOUT(rtc, alarm_wkalm_set_minute, 65) {
 	new = timegm((struct tm *)&tm);
 	ASSERT_EQ(new, secs);
 }
-#endif
-
-static void __attribute__((constructor))
-__constructor_order_last(void)
-{
-	if (!__constructor_order)
-		__constructor_order = _CONSTRUCTOR_ORDER_BACKWARD;
-}
 
 int main(int argc, char **argv)
 {
+	int ret = -1;
+
 	switch (argc) {
 	case 2:
 		rtc_file = argv[1];
@@ -401,5 +513,12 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	return test_harness_run(argc, argv);
+	/* Run the test if rtc_file is accessible */
+	if (access(rtc_file, R_OK) == 0)
+		ret = test_harness_run(argc, argv);
+	else
+		ksft_exit_skip("[SKIP]: Cannot access rtc file %s - Exiting\n",
+						rtc_file);
+
+	return ret;
 }

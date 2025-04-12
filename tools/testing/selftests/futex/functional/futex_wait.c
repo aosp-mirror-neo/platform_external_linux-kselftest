@@ -30,7 +30,7 @@ void usage(char *prog)
 
 static void *waiterfn(void *arg)
 {
-	struct timespec64 to;
+	struct timespec to;
 	unsigned int flags = 0;
 
 	if (arg)
@@ -94,13 +94,11 @@ int main(int argc, char *argv[])
 	}
 
 	/* Testing an anon page shared memory */
+#ifdef __ANDROID__
+	ksft_test_result_skip("shmget not implemented on Android\n");
+#else
 	shm_id = shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0666);
 	if (shm_id < 0) {
-		if (errno == ENOSYS) {
-			ksft_test_result_skip("shmget returned: %d %s\n",
-					      errno, strerror(errno));
-			goto skip_anon_page_shared_memory_test;
-		}
 		perror("shmget");
 		exit(1);
 	}
@@ -125,8 +123,7 @@ int main(int argc, char *argv[])
 	} else {
 		ksft_test_result_pass("futex_wake shared (page anon) succeeds\n");
 	}
-
-skip_anon_page_shared_memory_test:
+#endif
 
 	/* Testing a file backed shared memory */
 	fd = open(SHM_PATH, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -167,7 +164,9 @@ skip_anon_page_shared_memory_test:
 	}
 
 	/* Freeing resources */
+#ifndef __ANDROID__
 	shmdt(shared_data);
+#endif
 	munmap(shm, sizeof(f_private));
 	remove(SHM_PATH);
 	close(fd);
