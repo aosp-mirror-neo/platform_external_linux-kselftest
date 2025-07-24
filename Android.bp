@@ -955,7 +955,7 @@ cc_test {
         "tools/testing/selftests",
     ],
     srcs: [
-        "tools/testing/selftests/kvm/aarch64/pvm_wipe_mem.c",
+        "android/testing/selftests/kvm/aarch64/pvm_wipe_mem.c",
     ],
     cflags: [
         "-fno-stack-protector",
