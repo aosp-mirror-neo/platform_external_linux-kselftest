@@ -75,9 +75,9 @@ char *clockstring(int clockid)
 
 long long timespec_sub(struct timespec a, struct timespec b)
 {
-	long long ret = (long long)NSEC_PER_SEC * b.tv_sec + b.tv_nsec;
+	long long ret = NSEC_PER_SEC * b.tv_sec + b.tv_nsec;
 
-	ret -= (long long)NSEC_PER_SEC * a.tv_sec + a.tv_nsec;
+	ret -= NSEC_PER_SEC * a.tv_sec + a.tv_nsec;
 	return ret;
 }
 
@@ -91,7 +91,7 @@ void sigalarm(int signo)
 	alarmcount++;
 
 	delta_ns = timespec_sub(start_time, ts);
-	delta_ns -= (long long)NSEC_PER_SEC * TIMER_SECS * alarmcount;
+	delta_ns -= NSEC_PER_SEC * TIMER_SECS * alarmcount;
 
 	if (delta_ns < 0)
 		timer_fired_early = 1;
