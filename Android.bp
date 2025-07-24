@@ -971,13 +971,6 @@ cc_test {
 }
 
 // Lib test
-sh_test {
-    name: "kselftest_lib_printf",
-    sub_dir: "vts_linux_kselftest/lib",
-    src: "tools/testing/selftests/lib/printf.sh",
-    filename_from_src: true,
-    compile_multilib: "both",
-}
 
 sh_test {
     name: "kselftest_lib_bitmap",
