@@ -65,7 +65,7 @@ sh_test {
     src: "android/empty.sh",
     test_suites: [
         "general-tests",
-        "vts"
+        "vts",
     ],
     data: [
         ":kselftest_binderfs_binderfs_test",
@@ -138,7 +138,7 @@ sh_test {
     src: "android/empty.sh",
     test_suites: [
         "general-tests",
-        "vts"
+        "vts",
     ],
     data: [
         ":kselftest_binderfs_binderfs_test",
@@ -209,7 +209,7 @@ sh_test {
     src: "android/empty.sh",
     test_suites: [
         "general-tests",
-        "vts"
+        "vts",
     ],
     data: [
         ":kselftest_binderfs_binderfs_test",
@@ -286,7 +286,7 @@ sh_test {
     src: "android/empty.sh",
     test_suites: [
         "general-tests",
-        "vts"
+        "vts",
     ],
     data: [
         ":kselftest_binderfs_binderfs_test",
@@ -370,7 +370,7 @@ sh_test {
     src: "android/empty.sh",
     test_suites: [
         "general-tests",
-        "vts"
+        "vts",
     ],
     data: [
         ":kselftest_capabilities_test_execve",
@@ -1201,9 +1201,9 @@ cc_test {
     relative_install_path: "vts_linux_kselftest/size",
     srcs: ["tools/testing/selftests/size/get_size.c"],
     arch: {
-       x86_64: {
-           cflags: ["-mstackrealign"],
-       },
+        x86_64: {
+            cflags: ["-mstackrealign"],
+        },
     },
     defaults: ["kselftest_template_defaults"],
     nocrt: true,
@@ -1922,7 +1922,7 @@ cc_test {
     srcs: [
         "tools/testing/selftests/x86/entry_from_vm86.c",
     ],
-    enabled: false,  //missing sys/vm86.h
+    enabled: false, //missing sys/vm86.h
     static_libs: [
         "libdl",
     ],
