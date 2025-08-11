@@ -1,21 +1,24 @@
-From d7220f71999ff4f5a0d61b25d9ce54951d9d881a Mon Sep 17 00:00:00 2001
-From: Edward Liaw <edliaw@google.com>
-Date: Thu, 13 Mar 2025 21:41:30 +0000
-Subject: [PATCH 8/9] ANDROID: selftests/seccomp: backwards compatibility for
- 5.4
+From b4079cbcb35cb482543de4329313a2085794e141 Mon Sep 17 00:00:00 2001
+From: Wake Liu <wakel@google.com>
+Date: Thu, 24 Jul 2025 20:10:28 +0800
+Subject: [PATCH] ANDROID: selftests/seccomp: backwards compatibility for 5.4
 
 Gated some tests by kernel version and adjusted some tests for flags
 that were introduced after 5.4.  Tests should now pass on 5.4 and later.
 
-Bug: 147676645
+Original-Bug: 147676645
+Bug: 422759683
+Link: https://lore.kernel.org/all/20250807174613.1895006-1-wakel@google.com/
 Test: atest vts_linux_kselftest_x86_64:seccomp_seccomp_bpf_x86_64
 Signed-off-by: Edward Liaw <edliaw@google.com>
+Signed-off-by: Wake Liu <wakel@google.com>
+Change-Id: Idb0eae9defca77e6a8e17769291f92e55b9a7ef4
 ---
- tools/testing/selftests/seccomp/seccomp_bpf.c | 94 +++++++++++++++++--
- 1 file changed, 85 insertions(+), 9 deletions(-)
+ tools/testing/selftests/seccomp/seccomp_bpf.c | 107 ++++++++++++++++--
+ 1 file changed, 98 insertions(+), 9 deletions(-)
 
 diff --git a/tools/testing/selftests/seccomp/seccomp_bpf.c b/tools/testing/selftests/seccomp/seccomp_bpf.c
-index 8c3a73461475..835878379015 100644
+index 61acbd45ffaaf..366b4ef91b278 100644
 --- a/tools/testing/selftests/seccomp/seccomp_bpf.c
 +++ b/tools/testing/selftests/seccomp/seccomp_bpf.c
 @@ -13,12 +13,14 @@
@@ -33,12 +36,25 @@ index 8c3a73461475..835878379015 100644
  
  #include <errno.h>
  #include <linux/filter.h>
-@@ -289,6 +291,13 @@ int seccomp(unsigned int op, unsigned int flags, void *args)
+@@ -300,6 +302,26 @@ int seccomp(unsigned int op, unsigned int flags, void *args)
  }
  #endif
  
 +int seccomp_flag_supported(int flag)
 +{
++	/*
++	 * Probes if a seccomp filter flag is supported by the kernel.
++	 *
++	 * When an unsupported flag is passed to seccomp(SECCOMP_SET_MODE_FILTER, ...),
++	 * the kernel returns EINVAL.
++	 *
++	 * When a supported flag is passed, the kernel proceeds to validate the
++	 * filter program pointer. By passing NULL for the filter program,
++	 * the kernel attempts to dereference a bad address, resulting in EFAULT.
++	 *
++	 * Therefore, checking for EFAULT indicates that the flag itself was
++	 * recognized and supported by the kernel.
++	 */
 +	if (seccomp(SECCOMP_SET_MODE_FILTER, flag, NULL) == -1 && errno == EFAULT)
 +		return 1;
 +	return 0;
@@ -47,7 +63,7 @@ index 8c3a73461475..835878379015 100644
  #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
  #define syscall_arg(_n) (offsetof(struct seccomp_data, args[_n]))
  #elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-@@ -2431,13 +2440,12 @@ TEST(detect_seccomp_filter_flags)
+@@ -2436,13 +2458,12 @@ TEST(detect_seccomp_filter_flags)
  		ASSERT_NE(ENOSYS, errno) {
  			TH_LOG("Kernel does not support seccomp syscall!");
  		}
@@ -58,7 +74,7 @@ index 8c3a73461475..835878379015 100644
 -		}
  
 -		all_flags |= flag;
-+		if (ret == -1 && errno == EFAULT)
++		if (seccomp_flag_supported(flag))
 +			all_flags |= flag;
 +		else
 +			TH_LOG("Filter flag (0x%X) is not found to be supported!",
@@ -66,7 +82,7 @@ index 8c3a73461475..835878379015 100644
  	}
  
  	/*
-@@ -2865,6 +2873,12 @@ TEST_F(TSYNC, two_siblings_with_one_divergence)
+@@ -2870,6 +2891,12 @@ TEST_F(TSYNC, two_siblings_with_one_divergence)
  
  TEST_F(TSYNC, two_siblings_with_one_divergence_no_tid_in_err)
  {
@@ -79,7 +95,7 @@ index 8c3a73461475..835878379015 100644
  	long ret, flags;
  	void *status;
  
-@@ -3467,6 +3481,11 @@ TEST(user_notification_basic)
+@@ -3475,6 +3502,11 @@ TEST(user_notification_basic)
  
  TEST(user_notification_with_tsync)
  {
@@ -91,7 +107,7 @@ index 8c3a73461475..835878379015 100644
  	int ret;
  	unsigned int flags;
  
-@@ -3958,6 +3977,12 @@ TEST(user_notification_filter_empty)
+@@ -3966,6 +3998,12 @@ TEST(user_notification_filter_empty)
  
  TEST(user_ioctl_notification_filter_empty)
  {
@@ -104,7 +120,7 @@ index 8c3a73461475..835878379015 100644
  	pid_t pid;
  	long ret;
  	int status, p[2];
-@@ -4111,6 +4136,12 @@ int get_next_fd(int prev_fd)
+@@ -4119,6 +4157,12 @@ int get_next_fd(int prev_fd)
  
  TEST(user_notification_addfd)
  {
@@ -117,7 +133,7 @@ index 8c3a73461475..835878379015 100644
  	pid_t pid;
  	long ret;
  	int status, listener, memfd, fd, nextfd;
-@@ -4273,6 +4304,12 @@ TEST(user_notification_addfd)
+@@ -4281,6 +4325,12 @@ TEST(user_notification_addfd)
  
  TEST(user_notification_addfd_rlimit)
  {
@@ -130,7 +146,7 @@ index 8c3a73461475..835878379015 100644
  	pid_t pid;
  	long ret;
  	int status, listener, memfd;
-@@ -4318,9 +4355,12 @@ TEST(user_notification_addfd_rlimit)
+@@ -4326,9 +4376,12 @@ TEST(user_notification_addfd_rlimit)
  	EXPECT_EQ(ioctl(listener, SECCOMP_IOCTL_NOTIF_ADDFD, &addfd), -1);
  	EXPECT_EQ(errno, EMFILE);
  
@@ -146,7 +162,7 @@ index 8c3a73461475..835878379015 100644
  
  	addfd.newfd = 100;
  	addfd.flags = SECCOMP_ADDFD_FLAG_SETFD;
-@@ -4348,6 +4388,12 @@ TEST(user_notification_addfd_rlimit)
+@@ -4356,6 +4409,12 @@ TEST(user_notification_addfd_rlimit)
  
  TEST(user_notification_sync)
  {
@@ -159,7 +175,7 @@ index 8c3a73461475..835878379015 100644
  	struct seccomp_notif req = {};
  	struct seccomp_notif_resp resp = {};
  	int status, listener;
-@@ -4512,6 +4558,12 @@ static char get_proc_stat(struct __test_metadata *_metadata, pid_t pid)
+@@ -4520,6 +4579,12 @@ static char get_proc_stat(struct __test_metadata *_metadata, pid_t pid)
  
  TEST(user_notification_fifo)
  {
@@ -172,7 +188,7 @@ index 8c3a73461475..835878379015 100644
  	struct seccomp_notif_resp resp = {};
  	struct seccomp_notif req = {};
  	int i, status, listener;
-@@ -4615,6 +4667,12 @@ static long get_proc_syscall(struct __test_metadata *_metadata, int pid)
+@@ -4623,6 +4688,12 @@ static long get_proc_syscall(struct __test_metadata *_metadata, int pid)
  /* Ensure non-fatal signals prior to receive are unmodified */
  TEST(user_notification_wait_killable_pre_notification)
  {
@@ -185,7 +201,7 @@ index 8c3a73461475..835878379015 100644
  	struct sigaction new_action = {
  		.sa_handler = signal_handler,
  	};
-@@ -4685,6 +4743,12 @@ TEST(user_notification_wait_killable_pre_notification)
+@@ -4693,6 +4764,12 @@ TEST(user_notification_wait_killable_pre_notification)
  /* Ensure non-fatal signals after receive are blocked */
  TEST(user_notification_wait_killable)
  {
@@ -198,7 +214,7 @@ index 8c3a73461475..835878379015 100644
  	struct sigaction new_action = {
  		.sa_handler = signal_handler,
  	};
-@@ -4764,6 +4828,12 @@ TEST(user_notification_wait_killable)
+@@ -4772,6 +4849,12 @@ TEST(user_notification_wait_killable)
  /* Ensure fatal signals after receive are not blocked */
  TEST(user_notification_wait_killable_fatal)
  {
@@ -211,7 +227,7 @@ index 8c3a73461475..835878379015 100644
  	struct seccomp_notif req = {};
  	int listener, status;
  	pid_t pid;
-@@ -4846,6 +4916,12 @@ static void *tsync_vs_dead_thread_leader_sibling(void *_args)
+@@ -4854,6 +4937,12 @@ static void *tsync_vs_dead_thread_leader_sibling(void *_args)
   */
  TEST(tsync_vs_dead_thread_leader)
  {
@@ -225,5 +241,5 @@ index 8c3a73461475..835878379015 100644
  	pid_t pid;
  	long ret;
 -- 
-2.49.0.504.g3bcea36a83-goog
+2.50.1.703.g449372360f-goog
 

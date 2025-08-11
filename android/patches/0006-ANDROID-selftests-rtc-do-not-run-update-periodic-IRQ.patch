@@ -1,24 +1,27 @@
-From f461e9aa1ab4e6f6c47d6234e9f837d3a66e9a30 Mon Sep 17 00:00:00 2001
-From: Edward Liaw <edliaw@google.com>
-Date: Thu, 30 Jan 2025 22:52:45 +0000
-Subject: [PATCH 6/9] ANDROID: selftests/rtc: do not run update, periodic IRQ
- tests on Android
+From 27db10cc070340314e1c2025c88f806a99f6eb89 Mon Sep 17 00:00:00 2001
+From: Wake Liu <wakel@google.com>
+Date: Thu, 24 Jul 2025 20:08:10 +0800
+Subject: [PATCH] ANDROID: selftests/rtc: do not run update, periodic IRQ tests
+ on Android
 
 Android does not require the update or periodic IRQs from the RTC, so do
 not test this.
 
-Bug: 31578457
+Original-Bug: 31578457
+Bug: 422759683
 Test: mma
 Signed-off-by: Edward Liaw <edliaw@google.com>
+Signed-off-by: Wake Liu <wakel@google.com>
+Change-Id: I954b425befc0c4a76ad40bfb8cf852a615e79461
 ---
  tools/testing/selftests/rtc/rtctest.c | 24 ++++++++++++++++++++++++
  1 file changed, 24 insertions(+)
 
 diff --git a/tools/testing/selftests/rtc/rtctest.c b/tools/testing/selftests/rtc/rtctest.c
-index e103097d0b5b..2df0a353b9eb 100644
+index be175c0e6ae3c..61a678c1e4d7e 100644
 --- a/tools/testing/selftests/rtc/rtctest.c
 +++ b/tools/testing/selftests/rtc/rtctest.c
-@@ -147,6 +147,10 @@ TEST_F_TIMEOUT(rtc, date_read_loop, READ_LOOP_DURATION_SEC + 2) {
+@@ -152,6 +152,10 @@ TEST_F_TIMEOUT(rtc, date_read_loop, READ_LOOP_DURATION_SEC + 2) {
  }
  
  TEST_F_TIMEOUT(rtc, uie_read, NUM_UIE + 2) {
@@ -29,7 +32,7 @@ index e103097d0b5b..2df0a353b9eb 100644
  	int i, rc, irq = 0;
  	unsigned long data;
  
-@@ -176,6 +180,10 @@ TEST_F_TIMEOUT(rtc, uie_read, NUM_UIE + 2) {
+@@ -181,6 +185,10 @@ TEST_F_TIMEOUT(rtc, uie_read, NUM_UIE + 2) {
  }
  
  TEST_F(rtc, uie_select) {
@@ -40,7 +43,7 @@ index e103097d0b5b..2df0a353b9eb 100644
  	int i, rc, irq = 0;
  	unsigned long data;
  
-@@ -215,6 +223,10 @@ TEST_F(rtc, uie_select) {
+@@ -220,6 +228,10 @@ TEST_F(rtc, uie_select) {
  }
  
  TEST_F(rtc, alarm_alm_set) {
@@ -51,7 +54,7 @@ index e103097d0b5b..2df0a353b9eb 100644
  	struct timeval tv = { .tv_sec = ALARM_DELTA + 2 };
  	unsigned long data;
  	struct rtc_time tm;
-@@ -282,6 +294,10 @@ TEST_F(rtc, alarm_alm_set) {
+@@ -289,6 +301,10 @@ TEST_F(rtc, alarm_alm_set) {
  }
  
  TEST_F(rtc, alarm_wkalm_set) {
@@ -62,7 +65,7 @@ index e103097d0b5b..2df0a353b9eb 100644
  	struct timeval tv = { .tv_sec = ALARM_DELTA + 2 };
  	struct rtc_wkalrm alarm = { 0 };
  	struct rtc_time tm;
-@@ -345,6 +361,10 @@ TEST_F(rtc, alarm_wkalm_set) {
+@@ -354,6 +370,10 @@ TEST_F(rtc, alarm_wkalm_set) {
  }
  
  TEST_F_TIMEOUT(rtc, alarm_alm_set_minute, 65) {
@@ -73,7 +76,7 @@ index e103097d0b5b..2df0a353b9eb 100644
  	struct timeval tv = { .tv_sec = 62 };
  	unsigned long data;
  	struct rtc_time tm;
-@@ -412,6 +432,10 @@ TEST_F_TIMEOUT(rtc, alarm_alm_set_minute, 65) {
+@@ -421,6 +441,10 @@ TEST_F_TIMEOUT(rtc, alarm_alm_set_minute, 65) {
  }
  
  TEST_F_TIMEOUT(rtc, alarm_wkalm_set_minute, 65) {
@@ -85,5 +88,5 @@ index e103097d0b5b..2df0a353b9eb 100644
  	struct rtc_wkalrm alarm = { 0 };
  	struct rtc_time tm;
 -- 
-2.49.0.504.g3bcea36a83-goog
+2.50.1.703.g449372360f-goog
 
