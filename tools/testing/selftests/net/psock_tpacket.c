@@ -12,7 +12,7 @@
  *
  * Datapath:
  *   Open a pair of packet sockets and send resp. receive an a priori known
- *   packet pattern accross the sockets and check if it was received resp.
+ *   packet pattern across the sockets and check if it was received resp.
  *   sent correctly. Fanout in combination with RX_RING is currently not
  *   tested here.
  *
@@ -22,6 +22,7 @@
  *   - TPACKET_V3: RX_RING
  */
 
+#undef NDEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -362,7 +363,6 @@ static inline void *get_next_frame(struct ring *ring, int n)
 		return f0 + (n * ring->req3.tp_frame_size);
 	default:
 		bug_on(1);
-		return NULL;
 	}
 }
 
