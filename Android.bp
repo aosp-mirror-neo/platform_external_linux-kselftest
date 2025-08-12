@@ -1725,6 +1725,7 @@ cc_test {
     srcs: [
         "tools/testing/selftests/mm/virtual_address_range.c",
     ],
+    static_libs: ["kselftest_vm_util"],
     defaults: ["kselftest_template_defaults"],
     enabled: false,
     arch: {
