@@ -29,6 +29,7 @@ enum rtc_alarm_state {
 	RTC_ALARM_UNKNOWN,
 	RTC_ALARM_ENABLED,
 	RTC_ALARM_DISABLED,
+	RTC_ALARM_RES_MINUTE,
 };
 
 FIXTURE(rtc) {
@@ -88,7 +89,7 @@ static void nanosleep_with_retries(long ns)
 	}
 }
 
-static enum rtc_alarm_state get_rtc_alarm_state(int fd)
+static enum rtc_alarm_state get_rtc_alarm_state(int fd, int need_seconds)
 {
 	struct rtc_param param = { 0 };
 	int rc;
@@ -102,6 +103,10 @@ static enum rtc_alarm_state get_rtc_alarm_state(int fd)
 
 	if ((param.uvalue & _BITUL(RTC_FEATURE_ALARM)) == 0)
 		return RTC_ALARM_DISABLED;
+
+	/* Check if alarm has desired granularity */
+	if (need_seconds && (param.uvalue & _BITUL(RTC_FEATURE_ALARM_RES_MINUTE)))
+		return RTC_ALARM_RES_MINUTE;
 
 	return RTC_ALARM_ENABLED;
 }
@@ -147,10 +152,6 @@ TEST_F_TIMEOUT(rtc, date_read_loop, READ_LOOP_DURATION_SEC + 2) {
 }
 
 TEST_F_TIMEOUT(rtc, uie_read, NUM_UIE + 2) {
-#ifdef __ANDROID__ // b/31578457
-	SKIP(return, "Skipping test for Android");
-#endif
-
 	int i, rc, irq = 0;
 	unsigned long data;
 
@@ -180,10 +181,6 @@ TEST_F_TIMEOUT(rtc, uie_read, NUM_UIE + 2) {
 }
 
 TEST_F(rtc, uie_select) {
-#ifdef __ANDROID__ // b/31578457
-	SKIP(return, "Skipping test for Android");
-#endif
-
 	int i, rc, irq = 0;
 	unsigned long data;
 
@@ -223,10 +220,6 @@ TEST_F(rtc, uie_select) {
 }
 
 TEST_F(rtc, alarm_alm_set) {
-#ifdef __ANDROID__ // b/31578457
-	SKIP(return, "Skipping test for Android");
-#endif
-
 	struct timeval tv = { .tv_sec = ALARM_DELTA + 2 };
 	unsigned long data;
 	struct rtc_time tm;
@@ -239,9 +232,11 @@ TEST_F(rtc, alarm_alm_set) {
 		SKIP(return, "Skipping test since %s does not exist", rtc_file);
 	ASSERT_NE(-1, self->fd);
 
-	alarm_state = get_rtc_alarm_state(self->fd);
+	alarm_state = get_rtc_alarm_state(self->fd, 1);
 	if (alarm_state == RTC_ALARM_DISABLED)
 		SKIP(return, "Skipping test since alarms are not supported.");
+	if (alarm_state == RTC_ALARM_RES_MINUTE)
+		SKIP(return, "Skipping test since alarms has only minute granularity.");
 
 	rc = ioctl(self->fd, RTC_RD_TIME, &tm);
 	ASSERT_NE(-1, rc);
@@ -294,10 +289,6 @@ TEST_F(rtc, alarm_alm_set) {
 }
 
 TEST_F(rtc, alarm_wkalm_set) {
-#ifdef __ANDROID__ // b/31578457
-	SKIP(return, "Skipping test for Android");
-#endif
-
 	struct timeval tv = { .tv_sec = ALARM_DELTA + 2 };
 	struct rtc_wkalrm alarm = { 0 };
 	struct rtc_time tm;
@@ -311,9 +302,11 @@ TEST_F(rtc, alarm_wkalm_set) {
 		SKIP(return, "Skipping test since %s does not exist", rtc_file);
 	ASSERT_NE(-1, self->fd);
 
-	alarm_state = get_rtc_alarm_state(self->fd);
+	alarm_state = get_rtc_alarm_state(self->fd, 1);
 	if (alarm_state == RTC_ALARM_DISABLED)
 		SKIP(return, "Skipping test since alarms are not supported.");
+	if (alarm_state == RTC_ALARM_RES_MINUTE)
+		SKIP(return, "Skipping test since alarms has only minute granularity.");
 
 	rc = ioctl(self->fd, RTC_RD_TIME, &alarm.time);
 	ASSERT_NE(-1, rc);
@@ -361,10 +354,6 @@ TEST_F(rtc, alarm_wkalm_set) {
 }
 
 TEST_F_TIMEOUT(rtc, alarm_alm_set_minute, 65) {
-#ifdef __ANDROID__ // b/31578457
-	SKIP(return, "Skipping test for Android");
-#endif
-
 	struct timeval tv = { .tv_sec = 62 };
 	unsigned long data;
 	struct rtc_time tm;
@@ -377,7 +366,7 @@ TEST_F_TIMEOUT(rtc, alarm_alm_set_minute, 65) {
 		SKIP(return, "Skipping test since %s does not exist", rtc_file);
 	ASSERT_NE(-1, self->fd);
 
-	alarm_state = get_rtc_alarm_state(self->fd);
+	alarm_state = get_rtc_alarm_state(self->fd, 0);
 	if (alarm_state == RTC_ALARM_DISABLED)
 		SKIP(return, "Skipping test since alarms are not supported.");
 
@@ -432,10 +421,6 @@ TEST_F_TIMEOUT(rtc, alarm_alm_set_minute, 65) {
 }
 
 TEST_F_TIMEOUT(rtc, alarm_wkalm_set_minute, 65) {
-#ifdef __ANDROID__ // b/31578457
-	SKIP(return, "Skipping test for Android");
-#endif
-
 	struct timeval tv = { .tv_sec = 62 };
 	struct rtc_wkalrm alarm = { 0 };
 	struct rtc_time tm;
@@ -449,7 +434,7 @@ TEST_F_TIMEOUT(rtc, alarm_wkalm_set_minute, 65) {
 		SKIP(return, "Skipping test since %s does not exist", rtc_file);
 	ASSERT_NE(-1, self->fd);
 
-	alarm_state = get_rtc_alarm_state(self->fd);
+	alarm_state = get_rtc_alarm_state(self->fd, 0);
 	if (alarm_state == RTC_ALARM_DISABLED)
 		SKIP(return, "Skipping test since alarms are not supported.");
 
