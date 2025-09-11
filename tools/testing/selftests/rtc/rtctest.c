@@ -151,6 +151,7 @@ TEST_F_TIMEOUT(rtc, date_read_loop, READ_LOOP_DURATION_SEC + 2) {
 	TH_LOG("Performed %ld RTC time reads.", iter_count);
 }
 
+#ifndef __ANDROID__ // b/31578457
 TEST_F_TIMEOUT(rtc, uie_read, NUM_UIE + 2) {
 #ifdef __ANDROID__ // b/31578457
 	SKIP(return, "Skipping test for Android");
@@ -506,6 +507,7 @@ TEST_F_TIMEOUT(rtc, alarm_wkalm_set_minute, 65) {
 	new = timegm((struct tm *)&tm);
 	ASSERT_EQ(new, secs);
 }
+#endif
 
 int main(int argc, char **argv)
 {
