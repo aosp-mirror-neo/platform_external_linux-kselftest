@@ -875,6 +875,24 @@ cc_test {
     defaults: ["kselftest_defaults"],
 }
 
+cc_test {
+    name: "kselftest_futex_futex_priv_hash",
+    stem: "futex_priv_hash",
+    relative_install_path: "vts_linux_kselftest/futex/functional",
+    srcs: [
+        "tools/testing/selftests/futex/functional/futex_priv_hash.c",
+    ],
+    local_include_dirs: [
+        "tools/testing/selftests/futex/include",
+        "tools/testing/selftests",
+    ],
+    cflags: [
+        "-D_GNU_SOURCE",
+        "-pthread",
+    ],
+    defaults: ["kselftest_defaults"],
+}
+
 sh_test {
     name: "kselftest_futex_functional_run.sh",
     sub_dir: "vts_linux_kselftest/futex/functional",
