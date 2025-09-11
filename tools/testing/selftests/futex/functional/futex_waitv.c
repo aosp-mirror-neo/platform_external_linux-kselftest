@@ -59,14 +59,6 @@ void *waiterfn(void *arg)
 
 int main(int argc, char *argv[])
 {
-	if (!ksft_min_kernel_version(5, 16)) {
-		ksft_print_header();
-		ksft_set_plan(0);
-		ksft_print_msg("%s: FUTEX_WAITV not implemented until 5.16\n",
-			       basename(argv[0]));
-		ksft_print_cnts();
-		return KSFT_SKIP;
-	}
 	pthread_t waiter;
 	int res, ret = RET_PASS;
 	struct timespec to;
@@ -118,58 +110,40 @@ int main(int argc, char *argv[])
 	}
 
 	/* Shared waitv */
-	bool shm_supported = true;
-	int shm_id = shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0666);
+	for (i = 0; i < NR_FUTEXES; i++) {
+		int shm_id = shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0666);
 
-	if (shm_id < 0) {
-		if (errno == ENOSYS) {
-			shm_supported = false;
-			ksft_test_result_skip("Kernel does not support System V shared memory\n");
-		} else {
-			ksft_test_result_fail("shmget() failed with error: %s\n", strerror(errno));
-			ret = RET_FAIL;
-			shm_supported = false;
+		if (shm_id < 0) {
+			perror("shmget");
+			exit(1);
 		}
+
+		unsigned int *shared_data = shmat(shm_id, NULL, 0);
+
+		*shared_data = 0;
+		waitv[i].uaddr = (uintptr_t)shared_data;
+		waitv[i].flags = FUTEX_32;
+		waitv[i].val = 0;
+		waitv[i].__reserved = 0;
+	}
+
+	if (pthread_create(&waiter, NULL, waiterfn, NULL))
+		error("pthread_create failed\n", errno);
+
+	usleep(WAKE_WAIT_US);
+
+	res = futex_wake(u64_to_ptr(waitv[NR_FUTEXES - 1].uaddr), 1, 0);
+	if (res != 1) {
+		ksft_test_result_fail("futex_wake shared returned: %d %s\n",
+				      res ? errno : res,
+				      res ? strerror(errno) : "");
+		ret = RET_FAIL;
 	} else {
-		shmctl(shm_id, IPC_RMID, NULL);
+		ksft_test_result_pass("futex_waitv shared\n");
 	}
 
-	if (shm_supported) {
-		for (i = 0; i < NR_FUTEXES; i++) {
-			int shm_id = shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0666);
-
-			if (shm_id < 0) {
-				perror("shmget");
-				exit(1);
-			}
-
-			unsigned int *shared_data = shmat(shm_id, NULL, 0);
-
-			*shared_data = 0;
-			waitv[i].uaddr = (uintptr_t)shared_data;
-			waitv[i].flags = FUTEX_32;
-			waitv[i].val = 0;
-			waitv[i].__reserved = 0;
-		}
-
-		if (pthread_create(&waiter, NULL, waiterfn, NULL))
-			error("pthread_create failed\n", errno);
-
-		usleep(WAKE_WAIT_US);
-
-		res = futex_wake(u64_to_ptr(waitv[NR_FUTEXES - 1].uaddr), 1, 0);
-        if (res != 1) {
-            ksft_test_result_fail("futex_wake shared returned: %d %s\n",
-                                  res ? errno : res,
-                                  res ? strerror(errno) : "");
-            ret = RET_FAIL;
-        } else {
-			ksft_test_result_pass("futex_waitv shared\n");
-		}
-
-		for (i = 0; i < NR_FUTEXES; i++)
-			shmdt(u64_to_ptr(waitv[i].uaddr));
-	}
+	for (i = 0; i < NR_FUTEXES; i++)
+		shmdt(u64_to_ptr(waitv[i].uaddr));
 
 	/* Testing a waiter without FUTEX_32 flag */
 	waitv[0].flags = FUTEX_PRIVATE_FLAG;
@@ -261,4 +235,3 @@ int main(int argc, char *argv[])
 	ksft_print_cnts();
 	return ret;
 }
-

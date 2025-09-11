@@ -65,7 +65,8 @@ static void test_timeout(int res, int *ret, char *test_name, int err)
 {
 	if (!res || errno != err) {
 		if (errno == ENOSYS) {
-			ksft_test_result_skip("%s: %m\n", test_name);
+			ksft_test_result_skip("%s returned %d\n", test_name,
+					      errno);
 		} else {
 			ksft_test_result_fail("%s returned %d\n", test_name,
 					      res < 0 ? errno : res);
