@@ -88,8 +88,4 @@ echo
 ./futex_priv_hash -g $COLOR
 
 echo
-if [ -x ./futex_numa_mpol ]; then
-    ./futex_numa_mpol $COLOR
-else
-    echo "SKIP: futex_numa_mpol (not built)"
-fi
+./futex_numa_mpol $COLOR
