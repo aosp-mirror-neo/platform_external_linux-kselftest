@@ -363,6 +363,7 @@ static inline void *get_next_frame(struct ring *ring, int n)
 		return f0 + (n * ring->req3.tp_frame_size);
 	default:
 		bug_on(1);
+		return NULL;
 	}
 }
 
