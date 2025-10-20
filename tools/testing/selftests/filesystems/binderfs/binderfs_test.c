@@ -291,7 +291,7 @@ static int write_id_mapping(enum idmap_type type, pid_t pid, const char *buf,
 	return 0;
 }
 
-static bool has_userns()
+static bool has_userns(void)
 {
 	return (access("/proc/self/ns/user", F_OK) == 0);
 }

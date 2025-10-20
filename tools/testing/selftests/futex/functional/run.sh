@@ -82,3 +82,14 @@ echo
 
 echo
 ./futex_waitv $COLOR
+
+echo
+./futex_priv_hash $COLOR
+./futex_priv_hash -g $COLOR
+
+echo
+if [ -x ./futex_numa_mpol ]; then
+    ./futex_numa_mpol $COLOR
+else
+    echo "SKIP: futex_numa_mpol (not built)"
+fi
