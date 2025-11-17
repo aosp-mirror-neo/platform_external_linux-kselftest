@@ -13,19 +13,18 @@
  * we need to use the kernel's siginfo.h file and trick glibc
  * into accepting it.
  */
-#if defined(__GLIBC__) && defined(__GLIBC_PREREQ)
 #if !__GLIBC_PREREQ(2, 26)
 # include <asm/siginfo.h>
 # define __have_siginfo_t 1
 # define __have_sigval_t 1
 # define __have_sigevent_t 1
 #endif
-#endif
 
 #include <errno.h>
 #include <linux/filter.h>
 #include <sys/prctl.h>
 #include <sys/ptrace.h>
+#include <sys/time.h>
 #include <sys/user.h>
 #include <linux/prctl.h>
 #include <linux/ptrace.h>
@@ -73,6 +72,14 @@
 
 #ifndef noinline
 #define noinline __attribute__((noinline))
+#endif
+
+#ifndef __nocf_check
+#define __nocf_check __attribute__((nocf_check))
+#endif
+
+#ifndef __naked
+#define __naked __attribute__((__naked__))
 #endif
 
 #ifndef PR_SET_NO_NEW_PRIVS
@@ -301,26 +308,6 @@ int seccomp(unsigned int op, unsigned int flags, void *args)
 	return syscall(__NR_seccomp, op, flags, args);
 }
 #endif
-
-int seccomp_flag_supported(int flag)
-{
-	/*
-	 * Probes if a seccomp filter flag is supported by the kernel.
-	 *
-	 * When an unsupported flag is passed to seccomp(SECCOMP_SET_MODE_FILTER, ...),
-	 * the kernel returns EINVAL.
-	 *
-	 * When a supported flag is passed, the kernel proceeds to validate the
-	 * filter program pointer. By passing NULL for the filter program,
-	 * the kernel attempts to dereference a bad address, resulting in EFAULT.
-	 *
-	 * Therefore, checking for EFAULT indicates that the flag itself was
-	 * recognized and supported by the kernel.
-	 */
-	if (seccomp(SECCOMP_SET_MODE_FILTER, flag, NULL) == -1 && errno == EFAULT)
-		return 1;
-	return 0;
-}
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #define syscall_arg(_n) (offsetof(struct seccomp_data, args[_n]))
@@ -2458,12 +2445,13 @@ TEST(detect_seccomp_filter_flags)
 		ASSERT_NE(ENOSYS, errno) {
 			TH_LOG("Kernel does not support seccomp syscall!");
 		}
-
-		if (seccomp_flag_supported(flag))
-			all_flags |= flag;
-		else
-			TH_LOG("Filter flag (0x%X) is not found to be supported!",
+		EXPECT_EQ(-1, ret);
+		EXPECT_EQ(EFAULT, errno) {
+			TH_LOG("Failed to detect that a known-good filter flag (0x%X) is supported!",
 			       flag);
+		}
+
+		all_flags |= flag;
 	}
 
 	/*
@@ -2891,12 +2879,6 @@ TEST_F(TSYNC, two_siblings_with_one_divergence)
 
 TEST_F(TSYNC, two_siblings_with_one_divergence_no_tid_in_err)
 {
-	/* Depends on 5189149 (seccomp: allow TSYNC and USER_NOTIF together) */
-	if (!seccomp_flag_supported(SECCOMP_FILTER_FLAG_TSYNC_ESRCH)) {
-		SKIP(return, "Kernel does not support SECCOMP_FILTER_FLAG_TSYNC_ESRCH");
-		return;
-	}
-
 	long ret, flags;
 	void *status;
 
@@ -3502,11 +3484,6 @@ TEST(user_notification_basic)
 
 TEST(user_notification_with_tsync)
 {
-	/* Depends on 5189149 (seccomp: allow TSYNC and USER_NOTIF together) */
-	if (!seccomp_flag_supported(SECCOMP_FILTER_FLAG_TSYNC_ESRCH)) {
-		SKIP(return, "Kernel does not support SECCOMP_FILTER_FLAG_TSYNC_ESRCH");
-		return;
-	}
 	int ret;
 	unsigned int flags;
 
@@ -3577,6 +3554,10 @@ static void signal_handler(int signal)
 {
 	if (write(handled, "c", 1) != 1)
 		perror("write from signal");
+}
+
+static void signal_handler_nop(int signal)
+{
 }
 
 TEST(user_notification_signal)
@@ -3998,12 +3979,6 @@ TEST(user_notification_filter_empty)
 
 TEST(user_ioctl_notification_filter_empty)
 {
-	/* Depends on 95036a7 (seccomp: interrupt SECCOMP_IOCTL_NOTIF_RECV when all users have exited) */
-	if (!ksft_min_kernel_version(6, 11)) {
-		SKIP(return, "Kernel version < 6.11");
-		return;
-	}
-
 	pid_t pid;
 	long ret;
 	int status, p[2];
@@ -4157,12 +4132,6 @@ int get_next_fd(int prev_fd)
 
 TEST(user_notification_addfd)
 {
-	/* Depends on 0ae71c7 (seccomp: Support atomic "addfd + send reply") */
-	if (!ksft_min_kernel_version(5, 14)) {
-		SKIP(return, "Kernel version < 5.14");
-		return;
-	}
-
 	pid_t pid;
 	long ret;
 	int status, listener, memfd, fd, nextfd;
@@ -4325,12 +4294,6 @@ TEST(user_notification_addfd)
 
 TEST(user_notification_addfd_rlimit)
 {
-	/* Depends on 7cf97b1 (seccomp: Introduce addfd ioctl to seccomp user notifier) */
-	if (!ksft_min_kernel_version(5, 9)) {
-		SKIP(return, "Kernel version < 5.9");
-		return;
-	}
-
 	pid_t pid;
 	long ret;
 	int status, listener, memfd;
@@ -4376,12 +4339,9 @@ TEST(user_notification_addfd_rlimit)
 	EXPECT_EQ(ioctl(listener, SECCOMP_IOCTL_NOTIF_ADDFD, &addfd), -1);
 	EXPECT_EQ(errno, EMFILE);
 
-	/* Depends on 0ae71c7 (seccomp: Support atomic "addfd + send reply") */
-	if (ksft_min_kernel_version(5, 14)) {
-		addfd.flags = SECCOMP_ADDFD_FLAG_SEND;
-		EXPECT_EQ(ioctl(listener, SECCOMP_IOCTL_NOTIF_ADDFD, &addfd), -1);
-		EXPECT_EQ(errno, EMFILE);
-	}
+	addfd.flags = SECCOMP_ADDFD_FLAG_SEND;
+	EXPECT_EQ(ioctl(listener, SECCOMP_IOCTL_NOTIF_ADDFD, &addfd), -1);
+	EXPECT_EQ(errno, EMFILE);
 
 	addfd.newfd = 100;
 	addfd.flags = SECCOMP_ADDFD_FLAG_SETFD;
@@ -4409,12 +4369,6 @@ TEST(user_notification_addfd_rlimit)
 
 TEST(user_notification_sync)
 {
-	/* Depends on 48a1084 (seccomp: add the synchronous mode for seccomp_unotify) */
-	if (!ksft_min_kernel_version(6, 6)) {
-		SKIP(return, "Kernel version < 6.6");
-		return;
-	}
-
 	struct seccomp_notif req = {};
 	struct seccomp_notif_resp resp = {};
 	int status, listener;
@@ -4579,12 +4533,6 @@ static char get_proc_stat(struct __test_metadata *_metadata, pid_t pid)
 
 TEST(user_notification_fifo)
 {
-	/* Depends on 4cbf6f6 (seccomp: Use FIFO semantics to order notifications) */
-	if (!ksft_min_kernel_version(5, 19)) {
-		SKIP(return, "Kernel version < 5.19");
-		return;
-	}
-
 	struct seccomp_notif_resp resp = {};
 	struct seccomp_notif req = {};
 	int i, status, listener;
@@ -4688,12 +4636,6 @@ static long get_proc_syscall(struct __test_metadata *_metadata, int pid)
 /* Ensure non-fatal signals prior to receive are unmodified */
 TEST(user_notification_wait_killable_pre_notification)
 {
-	/* Depends on c2aa2df (seccomp: Add wait_killable semantic to seccomp user notifier) */
-	if (!ksft_min_kernel_version(5, 19)) {
-		SKIP(return, "Kernel version < 5.19");
-		return;
-	}
-
 	struct sigaction new_action = {
 		.sa_handler = signal_handler,
 	};
@@ -4764,12 +4706,6 @@ TEST(user_notification_wait_killable_pre_notification)
 /* Ensure non-fatal signals after receive are blocked */
 TEST(user_notification_wait_killable)
 {
-	/* Depends on c2aa2df (seccomp: Add wait_killable semantic to seccomp user notifier) */
-	if (!ksft_min_kernel_version(5, 19)) {
-		SKIP(return, "Kernel version < 5.19");
-		return;
-	}
-
 	struct sigaction new_action = {
 		.sa_handler = signal_handler,
 	};
@@ -4849,12 +4785,6 @@ TEST(user_notification_wait_killable)
 /* Ensure fatal signals after receive are not blocked */
 TEST(user_notification_wait_killable_fatal)
 {
-	/* Depends on c2aa2df (seccomp: Add wait_killable semantic to seccomp user notifier) */
-	if (!ksft_min_kernel_version(5, 19)) {
-		SKIP(return, "Kernel version < 5.19");
-		return;
-	}
-
 	struct seccomp_notif req = {};
 	int listener, status;
 	pid_t pid;
@@ -4902,6 +4832,132 @@ TEST(user_notification_wait_killable_fatal)
 	EXPECT_EQ(SIGTERM, WTERMSIG(status));
 }
 
+/* Ensure signals after the reply do not interrupt */
+TEST(user_notification_wait_killable_after_reply)
+{
+	int i, max_iter = 100000;
+	int listener, status;
+	int pipe_fds[2];
+	pid_t pid;
+	long ret;
+
+	ret = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+	ASSERT_EQ(0, ret)
+	{
+		TH_LOG("Kernel does not support PR_SET_NO_NEW_PRIVS!");
+	}
+
+	listener = user_notif_syscall(
+		__NR_dup, SECCOMP_FILTER_FLAG_NEW_LISTENER |
+			  SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV);
+	ASSERT_GE(listener, 0);
+
+	/*
+	 * Used to count invocations. One token is transferred from the child
+	 * to the parent per syscall invocation, the parent tries to take
+	 * one token per successful RECV. If the syscall is restarted after
+	 * RECV the parent will try to get two tokens while the child only
+	 * provided one.
+	 */
+	ASSERT_EQ(pipe(pipe_fds), 0);
+
+	pid = fork();
+	ASSERT_GE(pid, 0);
+
+	if (pid == 0) {
+		struct sigaction new_action = {
+			.sa_handler = signal_handler_nop,
+			.sa_flags = SA_RESTART,
+		};
+		struct itimerval timer = {
+			.it_value = { .tv_usec = 1000 },
+			.it_interval = { .tv_usec = 1000 },
+		};
+		char c = 'a';
+
+		close(pipe_fds[0]);
+
+		/* Setup the sigaction with SA_RESTART */
+		if (sigaction(SIGALRM, &new_action, NULL)) {
+			perror("sigaction");
+			exit(1);
+		}
+
+		/*
+		 * Kill with SIGALRM repeatedly, to try to hit the race when
+		 * handling the syscall.
+		 */
+		if (setitimer(ITIMER_REAL, &timer, NULL) < 0)
+			perror("setitimer");
+
+		for (i = 0; i < max_iter; ++i) {
+			int fd;
+
+			/* Send one token per iteration to catch repeats. */
+			if (write(pipe_fds[1], &c, sizeof(c)) != 1) {
+				perror("write");
+				exit(1);
+			}
+
+			fd = syscall(__NR_dup, 0);
+			if (fd < 0) {
+				perror("dup");
+				exit(1);
+			}
+			close(fd);
+		}
+
+		exit(0);
+	}
+
+	close(pipe_fds[1]);
+
+	for (i = 0; i < max_iter; ++i) {
+		struct seccomp_notif req = {};
+		struct seccomp_notif_addfd addfd = {};
+		struct pollfd pfd = {
+			.fd = pipe_fds[0],
+			.events = POLLIN,
+		};
+		char c;
+
+		/*
+		 * Try to receive one token. If it failed, one child syscall
+		 * was restarted after RECV and needed to be handled twice.
+		 */
+		ASSERT_EQ(poll(&pfd, 1, 1000), 1)
+			kill(pid, SIGKILL);
+
+		ASSERT_EQ(read(pipe_fds[0], &c, sizeof(c)), 1)
+			kill(pid, SIGKILL);
+
+		/*
+		 * Get the notification, reply to it as fast as possible to test
+		 * whether the child wrongly skips going into the non-preemptible
+		 * (TASK_KILLABLE) state.
+		 */
+		do
+			ret = ioctl(listener, SECCOMP_IOCTL_NOTIF_RECV, &req);
+		while (ret < 0 && errno == ENOENT); /* Accept interruptions before RECV */
+		ASSERT_EQ(ret, 0)
+			kill(pid, SIGKILL);
+
+		addfd.id = req.id;
+		addfd.flags = SECCOMP_ADDFD_FLAG_SEND;
+		addfd.srcfd = 0;
+		ASSERT_GE(ioctl(listener, SECCOMP_IOCTL_NOTIF_ADDFD, &addfd), 0)
+			kill(pid, SIGKILL);
+	}
+
+	/*
+	 * Wait for the process to exit, and make sure the process terminated
+	 * with a zero exit code..
+	 */
+	EXPECT_EQ(waitpid(pid, &status, 0), pid);
+	EXPECT_EQ(true, WIFEXITED(status));
+	EXPECT_EQ(0, WEXITSTATUS(status));
+}
+
 struct tsync_vs_thread_leader_args {
 	pthread_t leader;
 };
@@ -4937,12 +4993,6 @@ static void *tsync_vs_dead_thread_leader_sibling(void *_args)
  */
 TEST(tsync_vs_dead_thread_leader)
 {
-	/* Depends on bfafe5e (seccomp: release task filters when the task exits) */
-	if (!ksft_min_kernel_version(6, 11)) {
-		SKIP(return, "Kernel version < 6.11");
-		return;
-	}
-
 	int status;
 	pid_t pid;
 	long ret;
@@ -4985,7 +5035,36 @@ TEST(tsync_vs_dead_thread_leader)
 	EXPECT_EQ(0, status);
 }
 
-noinline int probed(void)
+#ifdef __x86_64__
+
+/*
+ * We need naked probed_uprobe function. Using __nocf_check
+ * check to skip possible endbr64 instruction and ignoring
+ * -Wattributes, otherwise the compilation might fail.
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+
+__naked __nocf_check noinline int probed_uprobe(void)
+{
+	/*
+	 * Optimized uprobe is possible only on top of nop5 instruction.
+	 */
+	asm volatile ("                                 \n"
+		".byte 0x0f, 0x1f, 0x44, 0x00, 0x00     \n"
+		"ret                                    \n"
+	);
+}
+#pragma GCC diagnostic pop
+
+#else
+noinline int probed_uprobe(void)
+{
+	return 1;
+}
+#endif
+
+noinline int probed_uretprobe(void)
 {
 	return 1;
 }
@@ -5038,35 +5117,46 @@ static ssize_t get_uprobe_offset(const void *addr)
 	return found ? (uintptr_t)addr - start + base : -1;
 }
 
-FIXTURE(URETPROBE) {
+FIXTURE(UPROBE) {
 	int fd;
 };
 
-FIXTURE_VARIANT(URETPROBE) {
+FIXTURE_VARIANT(UPROBE) {
 	/*
-	 * All of the URETPROBE behaviors can be tested with either
-	 * uretprobe attached or not
+	 * All of the U(RET)PROBE behaviors can be tested with either
+	 * u(ret)probe attached or not
 	 */
 	bool attach;
+	/*
+	 * Test both uprobe and uretprobe.
+	 */
+	bool uretprobe;
 };
 
-FIXTURE_VARIANT_ADD(URETPROBE, attached) {
-	.attach = true,
-};
-
-FIXTURE_VARIANT_ADD(URETPROBE, not_attached) {
+FIXTURE_VARIANT_ADD(UPROBE, not_attached) {
 	.attach = false,
+	.uretprobe = false,
 };
 
-FIXTURE_SETUP(URETPROBE)
+FIXTURE_VARIANT_ADD(UPROBE, uprobe_attached) {
+	.attach = true,
+	.uretprobe = false,
+};
+
+FIXTURE_VARIANT_ADD(UPROBE, uretprobe_attached) {
+	.attach = true,
+	.uretprobe = true,
+};
+
+FIXTURE_SETUP(UPROBE)
 {
 	const size_t attr_sz = sizeof(struct perf_event_attr);
 	struct perf_event_attr attr;
 	ssize_t offset;
 	int type, bit;
 
-#ifndef __NR_uretprobe
-	SKIP(return, "__NR_uretprobe syscall not defined");
+#if !defined(__NR_uprobe) || !defined(__NR_uretprobe)
+	SKIP(return, "__NR_uprobe ot __NR_uretprobe syscalls not defined");
 #endif
 
 	if (!variant->attach)
@@ -5076,12 +5166,17 @@ FIXTURE_SETUP(URETPROBE)
 
 	type = determine_uprobe_perf_type();
 	ASSERT_GE(type, 0);
-	bit = determine_uprobe_retprobe_bit();
-	ASSERT_GE(bit, 0);
-	offset = get_uprobe_offset(probed);
+
+	if (variant->uretprobe) {
+		bit = determine_uprobe_retprobe_bit();
+		ASSERT_GE(bit, 0);
+	}
+
+	offset = get_uprobe_offset(variant->uretprobe ? probed_uretprobe : probed_uprobe);
 	ASSERT_GE(offset, 0);
 
-	attr.config |= 1 << bit;
+	if (variant->uretprobe)
+		attr.config |= 1 << bit;
 	attr.size = attr_sz;
 	attr.type = type;
 	attr.config1 = ptr_to_u64("/proc/self/exe");
@@ -5092,7 +5187,7 @@ FIXTURE_SETUP(URETPROBE)
 			   PERF_FLAG_FD_CLOEXEC);
 }
 
-FIXTURE_TEARDOWN(URETPROBE)
+FIXTURE_TEARDOWN(UPROBE)
 {
 	/* we could call close(self->fd), but we'd need extra filter for
 	 * that and since we are calling _exit right away..
@@ -5106,11 +5201,17 @@ static int run_probed_with_filter(struct sock_fprog *prog)
 		return -1;
 	}
 
-	probed();
+	/*
+	 * Uprobe is optimized after first hit, so let's hit twice.
+	 */
+	probed_uprobe();
+	probed_uprobe();
+
+	probed_uretprobe();
 	return 0;
 }
 
-TEST_F(URETPROBE, uretprobe_default_allow)
+TEST_F(UPROBE, uprobe_default_allow)
 {
 	struct sock_filter filter[] = {
 		BPF_STMT(BPF_RET|BPF_K, SECCOMP_RET_ALLOW),
@@ -5123,7 +5224,7 @@ TEST_F(URETPROBE, uretprobe_default_allow)
 	ASSERT_EQ(0, run_probed_with_filter(&prog));
 }
 
-TEST_F(URETPROBE, uretprobe_default_block)
+TEST_F(UPROBE, uprobe_default_block)
 {
 	struct sock_filter filter[] = {
 		BPF_STMT(BPF_LD|BPF_W|BPF_ABS,
@@ -5140,11 +5241,14 @@ TEST_F(URETPROBE, uretprobe_default_block)
 	ASSERT_EQ(0, run_probed_with_filter(&prog));
 }
 
-TEST_F(URETPROBE, uretprobe_block_uretprobe_syscall)
+TEST_F(UPROBE, uprobe_block_syscall)
 {
 	struct sock_filter filter[] = {
 		BPF_STMT(BPF_LD|BPF_W|BPF_ABS,
 			offsetof(struct seccomp_data, nr)),
+#ifdef __NR_uprobe
+		BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, __NR_uprobe, 1, 2),
+#endif
 #ifdef __NR_uretprobe
 		BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, __NR_uretprobe, 0, 1),
 #endif
@@ -5159,11 +5263,14 @@ TEST_F(URETPROBE, uretprobe_block_uretprobe_syscall)
 	ASSERT_EQ(0, run_probed_with_filter(&prog));
 }
 
-TEST_F(URETPROBE, uretprobe_default_block_with_uretprobe_syscall)
+TEST_F(UPROBE, uprobe_default_block_with_syscall)
 {
 	struct sock_filter filter[] = {
 		BPF_STMT(BPF_LD|BPF_W|BPF_ABS,
 			offsetof(struct seccomp_data, nr)),
+#ifdef __NR_uprobe
+		BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, __NR_uprobe, 3, 0),
+#endif
 #ifdef __NR_uretprobe
 		BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, __NR_uretprobe, 2, 0),
 #endif
