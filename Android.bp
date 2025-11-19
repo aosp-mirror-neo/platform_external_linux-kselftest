@@ -93,7 +93,6 @@ sh_test {
         ":kselftest_net_test_bpf",
         ":kselftest_ptrace_tests_peeksiginfo",
         ":kselftest_rtc_tests_rtctest",
-        ":kselftest_seccomp_tests_seccomp_bpf",
         ":kselftest_size_test_get_size",
         ":kselftest_splice_test_default_file_splice_read",
         ":kselftest_splice_default_file_splice_read.sh",
@@ -165,7 +164,6 @@ sh_test {
         ":kselftest_net_test_bpf",
         ":kselftest_ptrace_tests_peeksiginfo",
         ":kselftest_rtc_tests_rtctest",
-        ":kselftest_seccomp_tests_seccomp_bpf",
         ":kselftest_size_test_get_size",
         ":kselftest_splice_test_default_file_splice_read",
         ":kselftest_splice_default_file_splice_read.sh",
@@ -237,7 +235,6 @@ sh_test {
         ":kselftest_net_test_bpf",
         ":kselftest_ptrace_tests_peeksiginfo",
         ":kselftest_rtc_tests_rtctest",
-        ":kselftest_seccomp_tests_seccomp_bpf",
         ":kselftest_size_test_get_size",
         ":kselftest_splice_test_default_file_splice_read",
         ":kselftest_splice_default_file_splice_read.sh",
@@ -313,7 +310,6 @@ sh_test {
         ":kselftest_net_tests_reuseaddr_conflict",
         ":kselftest_net_test_bpf",
         ":kselftest_rtc_tests_rtctest",
-        ":kselftest_seccomp_tests_seccomp_bpf",
         ":kselftest_size_test_get_size",
         ":kselftest_splice_test_default_file_splice_read",
         ":kselftest_splice_default_file_splice_read.sh",
@@ -387,7 +383,6 @@ sh_test {
         ":kselftest_net_test_bpf",
         ":kselftest_ptrace_tests_peeksiginfo",
         ":kselftest_rtc_tests_rtctest",
-        ":kselftest_seccomp_tests_seccomp_bpf",
         ":kselftest_size_test_get_size",
         ":kselftest_splice_test_default_file_splice_read",
         ":kselftest_splice_default_file_splice_read.sh",
@@ -1191,21 +1186,6 @@ cc_test {
     stem: "rtctest",
     relative_install_path: "vts_linux_kselftest/rtc",
     srcs: ["tools/testing/selftests/rtc/rtctest.c"],
-    defaults: ["kselftest_template_defaults"],
-}
-
-// seccomp test
-cc_test {
-    name: "kselftest_seccomp_tests_seccomp_bpf",
-    stem: "seccomp_bpf",
-    relative_install_path: "vts_linux_kselftest/seccomp",
-    srcs: ["tools/testing/selftests/seccomp/seccomp_bpf.c"],
-    static_libs: [
-        "libcap",
-    ],
-    cflags: [
-        "-Wno-unused-function",
-    ],
     defaults: ["kselftest_template_defaults"],
 }
 

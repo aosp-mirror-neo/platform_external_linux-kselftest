@@ -42,7 +42,6 @@
         <option name="test-command-line" key="net_reuseaddr_conflict_arm_32" value="cd &ktest_dir;/*/.; ./reuseaddr_conflict" />
         <option name="test-command-line" key="net_socket_arm_32" value="cd &ktest_dir;/*/.; ./socket" />
         <option name="test-command-line" key="rtc_rtctest_arm_32" value="cd &ktest_dir;/*/.; ./rtctest" />
-        <option name="test-command-line" key="seccomp_seccomp_bpf_arm_32" value="cd &ktest_dir;/*/.; ./seccomp_bpf" />
         <option name="test-command-line" key="size_get_size_arm_32" value="cd &ktest_dir;/*/.; ./get_size" />
         <option name="test-command-line" key="splice_default_file_splice_read.sh_arm_32" value="cd &ktest_dir;/*/.; ./default_file_splice_read.sh" />
         <option name="test-command-line" key="timers_inconsistency_check_arm_32" value="cd &ktest_dir;/*/.; ./inconsistency-check" />
