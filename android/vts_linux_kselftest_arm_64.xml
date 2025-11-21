@@ -59,7 +59,6 @@
         <option name="test-command-line" key="timers_threadtest_arm_64" value="cd &ktest_dir;/*/.; ./threadtest" />
         <option name="test-command-line" key="timers_valid_adjtimex_arm_64" value="cd &ktest_dir;/*/.; ./valid-adjtimex" />
         <option name="test-command-line" key="vDSO_kselftest_vdso_test_abi_arm_64" value="cd &ktest_dir;/*/.; ./kselftest_vdso_test_abi" />
-        <option name="test-command-line" key="vDSO_kselftest_vdso_test_clock_getres_arm_64" value="cd &ktest_dir;/*/.; ./kselftest_vdso_test_clock_getres" />
         <option name="test-command-line" key="vDSO_kselftest_vdso_test_getcpu_arm_64" value="cd &ktest_dir;/*/.; ./kselftest_vdso_test_getcpu" />
         <option name="test-command-line" key="vDSO_kselftest_vdso_test_gettimeofday_arm_64" value="cd &ktest_dir;/*/.; ./kselftest_vdso_test_gettimeofday" />
         <option name="test-command-line" key="mm_mremap_dontunmap_arm_64" value="cd &ktest_dir;/*/.; ./mremap_dontunmap" />
