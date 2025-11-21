@@ -82,6 +82,7 @@ sh_test {
         ":kselftest_futex_futex_wait_wouldblock",
         ":kselftest_futex_futex_wait",
         ":kselftest_futex_futex_waitv",
+        ":kselftest_futex_futex_priv_hash",
         ":kselftest_futex_functional_run.sh",
         ":kselftest_kcmp_tests_kcmp_test",
         ":kselftest_net_tests_socket",
@@ -153,6 +154,7 @@ sh_test {
         ":kselftest_futex_futex_wait_wouldblock",
         ":kselftest_futex_futex_wait",
         ":kselftest_futex_futex_waitv",
+        ":kselftest_futex_futex_priv_hash",
         ":kselftest_futex_functional_run.sh",
         ":kselftest_kcmp_tests_kcmp_test",
         ":kselftest_net_tests_socket",
@@ -224,6 +226,7 @@ sh_test {
         ":kselftest_futex_futex_wait_wouldblock",
         ":kselftest_futex_futex_wait",
         ":kselftest_futex_futex_waitv",
+        ":kselftest_futex_futex_priv_hash",
         ":kselftest_futex_functional_run.sh",
         ":kselftest_kcmp_tests_kcmp_test",
         ":kselftest_net_tests_socket",
@@ -300,6 +303,7 @@ sh_test {
         ":kselftest_futex_futex_wait_wouldblock",
         ":kselftest_futex_futex_wait",
         ":kselftest_futex_futex_waitv",
+        ":kselftest_futex_futex_priv_hash",
         ":kselftest_futex_functional_run.sh",
         ":kselftest_kcmp_tests_kcmp_test",
         ":kselftest_net_tests_socket",
@@ -890,6 +894,8 @@ cc_test {
     ],
     defaults: ["kselftest_defaults"],
 }
+
+
 
 sh_test {
     name: "kselftest_futex_functional_run.sh",
