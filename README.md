@@ -104,70 +104,58 @@ To run Kselftest tests for x86 platform, you can do:
 * `atest -a vts_linux_kselftest_x86_32`
 * `atest -a vts_linux_kselftest_x86_64`
 
-Sending Fixes Upstream
-----------------------
+Contributing Fixes
+------------------
 
-Kselftest is part of the upstream Linux kernel and as such you can use the
-get_maintainers.pl script there to see who to send patches to. Here’s an
-example using a commit already upstream:
+The primary workflow for fixing issues or adding tests is to contribute directly to the upstream Linux kernel. This repository is a mirror, so direct contributions are not accepted.
 
+## Upstream First (Preferred)
+
+All changes should be sent upstream whenever possible. Kselftest is part of the upstream Linux kernel, so contributions should follow the standard kernel development process. For a complete guide, please refer to the official documentation on [submitting patches](https://docs.kernel.org/process/submitting-patches.html).
+
+Here’s a summary of the key steps:
+
+### 1. Identify Maintainers and Reviewers
+
+To find out who should review your patch, use the `get_maintainer.pl` script from the kernel source tree. This script identifies the relevant maintainers and mailing lists based on the files you've changed.
+
+```shell
+# From your Linux kernel repository checkout:
+# Find reviewers for the changes in a specific commit
+git show <commit_hash> | ./scripts/get_maintainer.pl
+
+# Or, find reviewers for a local patch file
+./scripts/get_maintainer.pl /path/to/your/patch.patch
 ```
-smuckle@smuckle:~/repos/linux$ git show 352909b49ba | scripts/get_maintainer.pl
-Shuah Khan <shuah@kernel.org> (maintainer:KERNEL SELFTEST FRAMEWORK,commit_signer:2/6=33%,authored:2/6=33%,added_lines:2/6=33%,removed_lines:3/6=50%)
-Thomas Gleixner <tglx@linutronix.de> (commit_signer:2/6=33%)
-Greg Kroah-Hartman <gregkh@linuxfoundation.org> (commit_signer:1/6=17%,authored:1/6=17%,added_lines:1/6=17%)
-"Radim Krčmář" <rkrcmar@redhat.com> (commit_signer:1/6=17%)
-Ingo Molnar <mingo@kernel.org> (commit_signer:1/6=17%,commit_signer:1/1=100%)
-Andy Lutomirski <luto@kernel.org> (authored:2/6=33%,added_lines:2/6=33%,removed_lines:2/6=33%,authored:1/1=100%,added_lines:500/500=100%)
-"Kirill A. Shutemov" <kirill.shutemov@linux.intel.com> (authored:1/6=17%,added_lines:1/6=17%,removed_lines:1/6=17%)
-linux-kernel@vger.kernel.org (open list)
-linux-kselftest@vger.kernel.org (open list:KERNEL SELFTEST FRAMEWORK)
+
+You should CC everyone listed in the output when you send your patch. For kselftest, this will typically include Shuah Khan (the maintainer) and the `linux-kselftest@vger.kernel.org` and `linux-kernel@vger.kernel.org` mailing lists.
+
+### 2. Check Patch Style
+
+The Linux kernel has a strict coding style. Before submitting, ensure your patch is compliant by using the `checkpatch.pl` script. This will help you catch common style and formatting errors.
+
+```shell
+# First, create your patch file
+git format-patch HEAD~1 --stdout > my-fix.patch
+
+# Then, check it for style issues
+./scripts/checkpatch.pl my-fix.patch
 ```
+Aim for a clean output with no errors or warnings before submitting.
 
-In summary patches should be sent to linux-kselftest@vger.kernel.org and
-linux-kernel@vger.kernel.org, Shuah Khan (kselftest maintainer), and anyone
-else who has touched the code in question. Standard Linux kernel coding style
-and patch rules apply. They should be checkpatch (scripts/checkpatch.pl in the
-kernel repository) clean and sent in plain text in canonical patch format. One
-easy way to do this is by using git format-patch and git send-email.
+### 3. Send the Patch
 
-Merging Fixes
--------------
+Once your patch is ready and passes the style check, use `git send-email` to send it to the maintainers and mailing lists you identified in the first step. After your patch is accepted upstream, it will be mirrored back into this repository.
 
-When possible please merge fixes upstream first. Then cherrypick the change
-onto aosp/master in external/linux-kselftest.
+## Android-specific Patches
 
-If your change cannot go upstream first for whatever reason, please commit a
-patch for it into external/linux-kselftest/android/patches. This allows easier
-tracking of the delta with upstream and streamlines upgrades to new kselftest
-releases.
+If your change cannot go upstream (e.g., it is an Android-specific fix), please commit a patch for it into `external/linux-kselftest/android/patches`. This allows for easier tracking of the delta with upstream and streamlines upgrades to new kselftest releases.
 
 Updating Kselftest
 ------------------
 
-To merge in a new upstream version of kselftest:
-1. Do a git merge of the upstream tag with the "ours" policy, dropping all upstream changes. Do not commit yet.
-```
-git remote add upstream-stable git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
-git merge v6.13 -s ours
-```
-2. Delete tools/testing/selftests and replace it with a copy from the upstream kernel at the same tag as used above.
-```
-rm -rf tools/testing/selftests
-git checkout v6.13 -- tools/testing/selftests
-git checkout v6.13 -- include/vdso/time64.h
-git checkout v6.13 -- mm/gup_test.h
-```
-3. Apply the patches in android/patches/, resolving conflicts as required.
-```
-git am android/patches/*
-```
-4. Test on all supported kernel versions, ensuring that any tests currently enabled in VTS do not generate new failures.
-5. Commit the merge.
+**NOTE:** This project is a mirror of the kselftests found in the `common-android-mainline` kernel tree. Please do not submit code directly to this repository. All changes should be made upstream in [tools/testing/selftests/](https://android.googlesource.com/kernel/common/+/refs/heads/android-mainline/tools/testing/selftests/). To expedite merging upstream changes into the Android kernel, please refer to the internal documentation for commit message formatting and use tags like `UPSTREAM:`, `FROMGIT:`, or `FROMLIST:` in commit messages.
 
-If the runtime of kselftest changes significantly be sure to update the runtime-hint and test-timeout parameters to VTS in
-test config files under
-`test/vts-testcase/kernel/linux_kselftest/testcases/`.
 
 Notes on Individual Tests
 -------------------------
