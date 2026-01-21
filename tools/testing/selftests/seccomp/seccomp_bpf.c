@@ -54,7 +54,7 @@
 #include <sys/syscall.h>
 #include <poll.h>
 
-#include "../kselftest_harness.h"
+#include "kselftest_harness.h"
 #include "../clone3/clone3_selftests.h"
 
 /* Attempt to de-conflict with the selftests tree. */
@@ -4945,12 +4945,8 @@ TEST(user_notification_wait_killable_after_reply)
 		addfd.id = req.id;
 		addfd.flags = SECCOMP_ADDFD_FLAG_SEND;
 		addfd.srcfd = 0;
-		ret = ioctl(listener, SECCOMP_IOCTL_NOTIF_ADDFD, &addfd);
-		if (ret < 0 && errno == ENOENT) {
-			i--;
-			continue;
-		}
-		ASSERT_GE(ret, 0);
+		ASSERT_GE(ioctl(listener, SECCOMP_IOCTL_NOTIF_ADDFD, &addfd), 0)
+			kill(pid, SIGKILL);
 	}
 
 	/*
