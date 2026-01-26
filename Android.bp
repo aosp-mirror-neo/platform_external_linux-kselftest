@@ -118,6 +118,7 @@ sh_test {
         ":kselftest_mm_thuge_gen",
         ":kselftest_mm_transhuge_stress",
         ":kselftest_mm_run_vmtests",
+        ":kselftest_cpu-hotplug_cpu-on-off-test",
         ":kselftest_kvm_arm64_tests_pvm_wipe_mem",
         ":kselftest_vdso_test_abi",
         ":kselftest_vdso_test_getcpu",
@@ -189,6 +190,7 @@ sh_test {
         ":kselftest_mm_thuge_gen",
         ":kselftest_mm_transhuge_stress",
         ":kselftest_mm_run_vmtests",
+        ":kselftest_cpu-hotplug_cpu-on-off-test",
     ],
     compile_multilib: "32",
     enabled: false,
@@ -260,6 +262,7 @@ sh_test {
         ":kselftest_mm_thuge_gen",
         ":kselftest_mm_transhuge_stress",
         ":kselftest_mm_run_vmtests",
+        ":kselftest_cpu-hotplug_cpu-on-off-test",
         ":kselftest_vdso_test_abi",
         ":kselftest_vdso_test_getcpu",
         ":kselftest_vdso_test_gettimeofday",
@@ -335,6 +338,7 @@ sh_test {
         ":kselftest_mm_thuge_gen",
         ":kselftest_mm_transhuge_stress",
         ":kselftest_mm_run_vmtests",
+        ":kselftest_cpu-hotplug_cpu-on-off-test",
         ":kselftest_x86_tests_single_step_syscall",
         ":kselftest_x86_test_sysret_ss_attrs",
         ":kselftest_x86_tests_syscall_nt",
@@ -395,6 +399,7 @@ sh_test {
         ":kselftest_timer_tests_set-timer-lat",
         ":kselftest_timer_tests_threadtest",
         ":kselftest_timer_tests_valid-adjtimex",
+        ":kselftest_cpu-hotplug_cpu-on-off-test",
         ":kselftest_vdso_test_abi",
     ],
     enabled: false,
@@ -889,8 +894,6 @@ cc_test {
     ],
     defaults: ["kselftest_defaults"],
 }
-
-
 
 sh_test {
     name: "kselftest_futex_functional_run.sh",
