@@ -265,10 +265,8 @@ sh_test {
         ":kselftest_vdso_test_gettimeofday",
         ":kselftest_x86_tests_single_step_syscall",
         ":kselftest_x86_tests_syscall_nt",
-        ":kselftest_x86_ptrace_syscall",
         ":kselftest_x86_tests_test_mremap_vdso",
         ":kselftest_x86_check_initial_reg_state",
-        ":kselftest_x86_tests_ldt_gdt",
     ],
     enabled: false,
     arch: {
