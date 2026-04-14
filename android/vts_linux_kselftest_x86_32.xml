@@ -36,7 +36,7 @@
         <option name="abort-if-root-lost" value="true" />
         <option name="test-command-line" key="binderfs_x86_32" value="cd &ktest_dir;/*/.; ./binderfs_test" />
         <option name="test-command-line" key="capabilities_test_execve_x86_32" value="cd &ktest_dir;/*/.; ./test_execve" />
-        <option name="test-command-line" key="cpu_hotplug_cpu_on_off_test_x86_32" value="cd &ktest_dir;/*/.; ./cpu-on-off-test.sh" />
+        <option name="test-command-line" key="cpu_hotplug_cpu_on_off_test_x86_32" value="cd &ktest_dir;/*/.;UID=$(id -u) ./cpu-on-off-test.sh" />
         <option name="test-command-line" key="futex_functional_run.sh_x86_32" value="cd &ktest_dir;/*/.; USE_COLOR=0 ./run.sh" />
         <option name="min-kernel-version" key="futex_functional_run.sh_x86_32" value="5.1" />
         <option name="test-command-line" key="kcmp_kcmp_test_x86_32" value="cd &ktest_dir;/*/.; ./kcmp_test" />
