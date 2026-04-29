@@ -1711,18 +1711,16 @@ cc_test {
 }
 
 cc_test {
-    name: "kselftest_mm_virtual_address_range",
-    stem: "virtual_address_range",
+    name: "kselftest_mm_va_high_addr_switch",
+    stem: "va_high_addr_switch",
     relative_install_path: "vts_linux_kselftest/mm",
     srcs: [
-        "tools/testing/selftests/mm/virtual_address_range.c",
+        "tools/testing/selftests/mm/va_high_addr_switch.c",
     ],
     static_libs: ["kselftest_vm_util"],
     defaults: ["kselftest_template_defaults"],
-    enabled: false,
     arch: {
         arm64: {
-            enabled: true,
             cflags: ["-D__aarch64__"],
         },
     },
