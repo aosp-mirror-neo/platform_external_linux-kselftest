@@ -1,6 +1,8 @@
 # Bug component: 391836
-bettyzhou@google.com
-drosen@google.com
 wakel@google.com
-willmcvicker@google.com
+bettyzhou@google.com #{LAST_RESORT_SUGGESTION}
+cmllamas@google.com #{LAST_RESORT_SUGGESTION}
+jyescas@google.com #{LAST_RESORT_SUGGESTION}
+kaleshsingh@google.com #{LAST_RESORT_SUGGESTION}
+willmcvicker@google.com #{LAST_RESORT_SUGGESTION}
 include platform/system/core:main:/janitors/OWNERS #{LAST_RESORT_SUGGESTION}
