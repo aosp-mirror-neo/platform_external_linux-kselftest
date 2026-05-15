@@ -10,8 +10,10 @@
  *  packet coalesced: it can be smaller than the rest and coalesced
  *  as long as it is in the same flow.
  *   - data_same:    same size packets coalesce
- *   - data_lrg_sml: large then small coalesces
- *   - data_sml_lrg: small then large doesn't coalesce
+ *   - data_lrg_sml:   large then small coalesces
+ *   - data_lrg_1byte: large then 1 byte coalesces (Ethernet padding)
+ *   - data_sml_lrg:   small then large doesn't coalesce
+ *   - data_burst:   two bursts of two, separated by 100ms
  *
  * ack:
  *  Pure ACK does not coalesce.
@@ -34,6 +36,7 @@
  *  Packets with different (ECN, TTL, TOS) header, IP options or
  *  IP fragments shouldn't coalesce.
  *   - ip_ecn, ip_tos:            shared between IPv4/IPv6
+ *   - ip_csum:                   IPv4 only, bad IP header checksum
  *   - ip_ttl, ip_opt, ip_frag4:  IPv4 only
  *   - ip_id_df*:                 IPv4 IP ID field coalescing tests
  *   - ip_frag6, ip_v6ext_*:      IPv6 only
@@ -42,6 +45,10 @@
  *  Packets larger than GRO_MAX_SIZE packets shouldn't coalesce.
  *   - large_max: exceeding max size
  *   - large_rem: remainder handling
+ *
+ * single, capacity:
+ *  Boring cases used to test coalescing machinery itself and stats
+ *  more than protocol behavior.
  *
  * MSS is defined as 4096 - header because if it is too small
  * (i.e. 1500 MTU - header), it will result in many packets,
@@ -63,6 +70,7 @@
 #include <linux/filter.h>
 #include <linux/if_packet.h>
 #include <linux/ipv6.h>
+#include <linux/net_tstamp.h>
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <netinet/in.h>
@@ -74,10 +82,11 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "kselftest.h"
-#include "../../net/lib/ksft.h"
+#include "ksft.h"
 
 #define DPORT 8000
 #define SPORT 1500
@@ -86,11 +95,12 @@
 #define START_SEQ 100
 #define START_ACK 100
 #define ETH_P_NONE 0
-#define TOTAL_HDR_LEN (ETH_HLEN + sizeof(struct ipv6hdr) + sizeof(struct tcphdr))
-#define MSS (4096 - sizeof(struct tcphdr) - sizeof(struct ipv6hdr))
-#define MAX_PAYLOAD (IP_MAXPACKET - sizeof(struct tcphdr) - sizeof(struct ipv6hdr))
-#define NUM_LARGE_PKT (MAX_PAYLOAD / MSS)
-#define MAX_HDR_LEN (ETH_HLEN + sizeof(struct ipv6hdr) + sizeof(struct tcphdr))
+#define ASSUMED_MTU 4096
+#define MAX_MSS (ASSUMED_MTU - sizeof(struct iphdr) - sizeof(struct tcphdr))
+#define MAX_HDR_LEN \
+	(ETH_HLEN + sizeof(struct ipv6hdr) * 2 + sizeof(struct tcphdr))
+#define MAX_LARGE_PKT_CNT ((IP_MAXPACKET - (MAX_HDR_LEN - ETH_HLEN)) /	\
+			   (ASSUMED_MTU - (MAX_HDR_LEN - ETH_HLEN)))
 #define MIN_EXTHDR_SIZE 8
 #define EXT_PAYLOAD_1 "\x00\x00\x00\x00\x00\x00"
 #define EXT_PAYLOAD_2 "\x11\x11\x11\x11\x11\x11"
@@ -123,6 +133,32 @@ static int tcp_offset = -1;
 static int total_hdr_len = -1;
 static int ethhdr_proto = -1;
 static bool ipip;
+static bool ip6ip6;
+static uint64_t txtime_ns;
+static int num_flows = 4;
+static bool order_check;
+
+#define CAPACITY_PAYLOAD_LEN 200
+
+#define TXTIME_DELAY_MS 5
+
+/* Max TCP payload that GRO will coalesce. The outer header overhead
+ * varies by encapsulation, reducing the effective max payload.
+ */
+static int max_payload(void)
+{
+	return IP_MAXPACKET - (total_hdr_len - ETH_HLEN);
+}
+
+static int calc_mss(void)
+{
+	return ASSUMED_MTU - (total_hdr_len - ETH_HLEN);
+}
+
+static int num_large_pkt(void)
+{
+	return max_payload() / calc_mss();
+}
 
 static void vlog(const char *fmt, ...)
 {
@@ -141,15 +177,13 @@ static void setup_sock_filter(int fd)
 	const int ethproto_off = offsetof(struct ethhdr, h_proto);
 	int optlen = 0;
 	int ipproto_off, opt_ipproto_off;
-	int next_off;
 
-	if (ipip)
-		next_off = sizeof(struct iphdr) + offsetof(struct iphdr, protocol);
-	else if (proto == PF_INET)
-		next_off = offsetof(struct iphdr, protocol);
+	if (proto == PF_INET)
+		ipproto_off = tcp_offset - sizeof(struct iphdr) +
+			      offsetof(struct iphdr, protocol);
 	else
-		next_off = offsetof(struct ipv6hdr, nexthdr);
-	ipproto_off = ETH_HLEN + next_off;
+		ipproto_off = tcp_offset - sizeof(struct ipv6hdr) +
+			      offsetof(struct ipv6hdr, nexthdr);
 
 	/* Overridden later if exthdrs are used: */
 	opt_ipproto_off = ipproto_off;
@@ -330,34 +364,101 @@ static void fill_transportlayer(void *buf, int seq_offset, int ack_offset,
 
 static void write_packet(int fd, char *buf, int len, struct sockaddr_ll *daddr)
 {
+	char control[CMSG_SPACE(sizeof(uint64_t))];
+	struct msghdr msg = {};
+	struct iovec iov = {};
+	struct cmsghdr *cm;
 	int ret = -1;
 
-	ret = sendto(fd, buf, len, 0, (struct sockaddr *)daddr, sizeof(*daddr));
+	iov.iov_base = buf;
+	iov.iov_len = len;
+
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	msg.msg_name = daddr;
+	msg.msg_namelen = sizeof(*daddr);
+
+	if (txtime_ns) {
+		memset(control, 0, sizeof(control));
+		msg.msg_control = control;
+		msg.msg_controllen = sizeof(control);
+
+		cm = CMSG_FIRSTHDR(&msg);
+		cm->cmsg_level = SOL_SOCKET;
+		cm->cmsg_type = SCM_TXTIME;
+		cm->cmsg_len = CMSG_LEN(sizeof(uint64_t));
+		memcpy(CMSG_DATA(cm), &txtime_ns, sizeof(txtime_ns));
+	}
+
+	ret = sendmsg(fd, &msg, 0);
 	if (ret == -1)
-		error(1, errno, "sendto failure");
+		error(1, errno, "sendmsg failure");
 	if (ret != len)
-		error(1, errno, "sendto wrong length");
+		error(1, 0, "sendmsg wrong length: %d vs %d", ret, len);
 }
 
 static void create_packet(void *buf, int seq_offset, int ack_offset,
 			  int payload_len, int fin)
 {
+	int ip_hdr_len = (proto == PF_INET) ?
+			 sizeof(struct iphdr) : sizeof(struct ipv6hdr);
+	int inner_ip_off = tcp_offset - ip_hdr_len;
+
 	memset(buf, 0, total_hdr_len);
 	memset(buf + total_hdr_len, 'a', payload_len);
 
 	fill_transportlayer(buf + tcp_offset, seq_offset, ack_offset,
 			    payload_len, fin);
 
-	if (ipip) {
-		fill_networklayer(buf + ETH_HLEN, payload_len + sizeof(struct iphdr),
-				  IPPROTO_IPIP);
-		fill_networklayer(buf + ETH_HLEN + sizeof(struct iphdr),
-				  payload_len, IPPROTO_TCP);
-	} else {
-		fill_networklayer(buf + ETH_HLEN, payload_len, IPPROTO_TCP);
+	fill_networklayer(buf + inner_ip_off, payload_len, IPPROTO_TCP);
+	if (inner_ip_off > ETH_HLEN) {
+		int encap_proto = (proto == PF_INET) ?
+				  IPPROTO_IPIP : IPPROTO_IPV6;
+
+		fill_networklayer(buf + ETH_HLEN,
+				  payload_len + ip_hdr_len, encap_proto);
 	}
 
 	fill_datalinklayer(buf);
+}
+
+static void create_capacity_packet(void *buf, int flow_id, int pkt_idx, int psh)
+{
+	int seq_offset = pkt_idx * CAPACITY_PAYLOAD_LEN;
+	struct tcphdr *tcph;
+
+	create_packet(buf, seq_offset, 0, CAPACITY_PAYLOAD_LEN, 0);
+
+	/* Customize for this flow id */
+	memset(buf + total_hdr_len, 'a' + flow_id, CAPACITY_PAYLOAD_LEN);
+
+	tcph = buf + tcp_offset;
+	tcph->source = htons(SPORT + flow_id);
+	tcph->psh = psh;
+	tcph->check = 0;
+	tcph->check = tcp_checksum(tcph, CAPACITY_PAYLOAD_LEN);
+}
+
+/* Send a capacity test, 2 packets per flow, all first packets then all second:
+ *  A1 B1 C1 D1 ... A2 B2 C2 D2 ...
+ */
+static void send_capacity(int fd, struct sockaddr_ll *daddr)
+{
+	static char buf[MAX_HDR_LEN + CAPACITY_PAYLOAD_LEN];
+	int pkt_size = total_hdr_len + CAPACITY_PAYLOAD_LEN;
+	int i;
+
+	/* Send first packet of each flow (no PSH) */
+	for (i = 0; i < num_flows; i++) {
+		create_capacity_packet(buf, i, 0, 0);
+		write_packet(fd, buf, pkt_size, daddr);
+	}
+
+	/* Send second packet of each flow (with PSH to flush) */
+	for (i = 0; i < num_flows; i++) {
+		create_capacity_packet(buf, i, 1, 1);
+		write_packet(fd, buf, pkt_size, daddr);
+	}
 }
 
 #ifndef TH_CWR
@@ -438,18 +539,20 @@ static void send_data_pkts(int fd, struct sockaddr_ll *daddr,
  */
 static void send_large(int fd, struct sockaddr_ll *daddr, int remainder)
 {
-	static char pkts[NUM_LARGE_PKT][TOTAL_HDR_LEN + MSS];
-	static char last[TOTAL_HDR_LEN + MSS];
-	static char new_seg[TOTAL_HDR_LEN + MSS];
+	static char pkts[MAX_LARGE_PKT_CNT][MAX_HDR_LEN + MAX_MSS];
+	static char new_seg[MAX_HDR_LEN + MAX_MSS];
+	static char last[MAX_HDR_LEN + MAX_MSS];
+	const int num_pkt = num_large_pkt();
+	const int mss = calc_mss();
 	int i;
 
-	for (i = 0; i < NUM_LARGE_PKT; i++)
-		create_packet(pkts[i], i * MSS, 0, MSS, 0);
-	create_packet(last, NUM_LARGE_PKT * MSS, 0, remainder, 0);
-	create_packet(new_seg, (NUM_LARGE_PKT + 1) * MSS, 0, remainder, 0);
+	for (i = 0; i < num_pkt; i++)
+		create_packet(pkts[i], i * mss, 0, mss, 0);
+	create_packet(last, num_pkt * mss, 0, remainder, 0);
+	create_packet(new_seg, (num_pkt + 1) * mss, 0, remainder, 0);
 
-	for (i = 0; i < NUM_LARGE_PKT; i++)
-		write_packet(fd, pkts[i], total_hdr_len + MSS, daddr);
+	for (i = 0; i < num_pkt; i++)
+		write_packet(fd, pkts[i], total_hdr_len + mss, daddr);
 	write_packet(fd, last, total_hdr_len + remainder, daddr);
 	write_packet(fd, new_seg, total_hdr_len + remainder, daddr);
 }
@@ -469,8 +572,7 @@ static void send_ack(int fd, struct sockaddr_ll *daddr)
 static void recompute_packet(char *buf, char *no_ext, int extlen)
 {
 	struct tcphdr *tcphdr = (struct tcphdr *)(buf + tcp_offset);
-	struct ipv6hdr *ip6h = (struct ipv6hdr *)(buf + ETH_HLEN);
-	struct iphdr *iph = (struct iphdr *)(buf + ETH_HLEN);
+	int off;
 
 	memmove(buf, no_ext, total_hdr_len);
 	memmove(buf + total_hdr_len + extlen,
@@ -480,18 +582,22 @@ static void recompute_packet(char *buf, char *no_ext, int extlen)
 	tcphdr->check = 0;
 	tcphdr->check = tcp_checksum(tcphdr, PAYLOAD_LEN + extlen);
 	if (proto == PF_INET) {
-		iph->tot_len = htons(ntohs(iph->tot_len) + extlen);
-		iph->check = 0;
-		iph->check = checksum_fold(iph, sizeof(struct iphdr), 0);
+		for (off = ETH_HLEN; off < tcp_offset;
+		     off += sizeof(struct iphdr)) {
+			struct iphdr *iph = (struct iphdr *)(buf + off);
 
-		if (ipip) {
-			iph += 1;
 			iph->tot_len = htons(ntohs(iph->tot_len) + extlen);
 			iph->check = 0;
 			iph->check = checksum_fold(iph, sizeof(struct iphdr), 0);
 		}
 	} else {
-		ip6h->payload_len = htons(ntohs(ip6h->payload_len) + extlen);
+		for (off = ETH_HLEN; off < tcp_offset;
+		     off += sizeof(struct ipv6hdr)) {
+			struct ipv6hdr *ip6h = (struct ipv6hdr *)(buf + off);
+
+			ip6h->payload_len =
+				htons(ntohs(ip6h->payload_len) + extlen);
+		}
 	}
 }
 
@@ -577,6 +683,24 @@ static void send_changed_checksum(int fd, struct sockaddr_ll *daddr)
 
 	create_packet(buf, PAYLOAD_LEN, 0, PAYLOAD_LEN, 0);
 	tcph->check = tcph->check - 1;
+	write_packet(fd, buf, pkt_size, daddr);
+}
+
+/* Packets with incorrect IPv4 header checksum don't coalesce. */
+static void send_changed_ip_checksum(int fd, struct sockaddr_ll *daddr)
+{
+	static char buf[MAX_HDR_LEN + PAYLOAD_LEN];
+	struct iphdr *iph = (struct iphdr *)(buf + ETH_HLEN);
+	int pkt_size = total_hdr_len + PAYLOAD_LEN;
+
+	create_packet(buf, 0, 0, PAYLOAD_LEN, 0);
+	write_packet(fd, buf, pkt_size, daddr);
+
+	create_packet(buf, PAYLOAD_LEN, 0, PAYLOAD_LEN, 0);
+	iph->check = iph->check - 1;
+	write_packet(fd, buf, pkt_size, daddr);
+
+	create_packet(buf, PAYLOAD_LEN * 2, 0, PAYLOAD_LEN, 0);
 	write_packet(fd, buf, pkt_size, daddr);
 }
 
@@ -1022,7 +1146,8 @@ static void check_recv_pkts(int fd, int *correct_payload,
 
 		if (iph->version == 4)
 			ip_ext_len = (iph->ihl - 5) * 4;
-		else if (ip6h->version == 6 && ip6h->nexthdr != IPPROTO_TCP)
+		else if (ip6h->version == 6 && !ip6ip6 &&
+			 ip6h->nexthdr != IPPROTO_TCP)
 			ip_ext_len = MIN_EXTHDR_SIZE;
 
 		tcph = (struct tcphdr *)(buffer + tcp_offset + ip_ext_len);
@@ -1056,8 +1181,129 @@ static void check_recv_pkts(int fd, int *correct_payload,
 	printf("Test succeeded\n\n");
 }
 
+static void check_capacity_pkts(int fd)
+{
+	static char buffer[IP_MAXPACKET + ETH_HLEN + 1];
+	struct iphdr *iph = (struct iphdr *)(buffer + ETH_HLEN);
+	struct ipv6hdr *ip6h = (struct ipv6hdr *)(buffer + ETH_HLEN);
+	int num_pkt = 0, num_coal = 0, pkt_idx;
+	const char *fail_reason = NULL;
+	int flow_order[num_flows * 2];
+	int coalesced[num_flows];
+	struct tcphdr *tcph;
+	int ip_ext_len = 0;
+	int total_data = 0;
+	int pkt_size = -1;
+	int data_len = 0;
+	int flow_id;
+	int sport;
+
+	memset(coalesced, 0, sizeof(coalesced));
+	memset(flow_order, -1, sizeof(flow_order));
+
+	while (1) {
+		ip_ext_len = 0;
+		pkt_size = recv(fd, buffer, IP_MAXPACKET + ETH_HLEN + 1, 0);
+		if (pkt_size < 0)
+			recv_error(fd, errno);
+
+		if (iph->version == 4)
+			ip_ext_len = (iph->ihl - 5) * 4;
+		else if (ip6h->version == 6 && !ip6ip6 &&
+			 ip6h->nexthdr != IPPROTO_TCP)
+			ip_ext_len = MIN_EXTHDR_SIZE;
+
+		tcph = (struct tcphdr *)(buffer + tcp_offset + ip_ext_len);
+
+		if (tcph->fin)
+			break;
+
+		sport = ntohs(tcph->source);
+		flow_id = sport - SPORT;
+
+		if (flow_id < 0 || flow_id >= num_flows) {
+			vlog("Invalid flow_id %d from sport %d\n",
+			     flow_id, sport);
+			fail_reason = fail_reason ?: "invalid packet";
+			continue;
+		}
+
+		/* Calculate payload length */
+		if (pkt_size == ETH_ZLEN && iph->version == 4) {
+			data_len = ntohs(iph->tot_len)
+				- sizeof(struct tcphdr) - sizeof(struct iphdr);
+		} else {
+			data_len = pkt_size - total_hdr_len - ip_ext_len;
+		}
+
+		if (num_pkt < num_flows * 2) {
+			flow_order[num_pkt] = flow_id;
+		} else if (num_pkt == num_flows * 2) {
+			vlog("More packets than expected (%d)\n",
+			     num_flows * 2);
+			fail_reason = fail_reason ?: "too many packets";
+		}
+		coalesced[flow_id] = data_len;
+
+		if (data_len == CAPACITY_PAYLOAD_LEN * 2) {
+			num_coal++;
+		} else {
+			vlog("Pkt %d: flow %d, sport %d, len %d (expected %d)\n",
+			     num_pkt, flow_id, sport, data_len,
+			     CAPACITY_PAYLOAD_LEN * 2);
+			fail_reason = fail_reason ?: "not coalesced";
+		}
+
+		num_pkt++;
+		total_data += data_len;
+	}
+
+	/* Check flow ordering. We expect to see all non-coalesced first segs
+	 * then interleaved coalesced and non-coalesced second frames.
+	 */
+	pkt_idx = 0;
+	for (flow_id = 0; order_check && flow_id < num_flows; flow_id++) {
+		bool coaled = coalesced[flow_id] > CAPACITY_PAYLOAD_LEN;
+
+		if (coaled)
+			continue;
+
+		if (flow_order[pkt_idx] != flow_id) {
+			vlog("Flow order mismatch (non-coalesced) at position %d: expected flow %d, got flow %d\n",
+			     pkt_idx, flow_id, flow_order[pkt_idx]);
+			fail_reason = fail_reason ?: "bad packet order (1)";
+		}
+		pkt_idx++;
+	}
+	for (flow_id = 0; order_check && flow_id < num_flows; flow_id++) {
+		bool coaled = coalesced[flow_id] > CAPACITY_PAYLOAD_LEN;
+
+		if (flow_order[pkt_idx] != flow_id) {
+			vlog("Flow order mismatch at position %d: expected flow %d, got flow %d, coalesced: %d\n",
+			     pkt_idx, flow_id, flow_order[pkt_idx], coaled);
+			fail_reason = fail_reason ?: "bad packet order (2)";
+		}
+		pkt_idx++;
+	}
+
+	if (!fail_reason) {
+		vlog("All %d flows coalesced correctly\n", num_flows);
+		printf("Test succeeded\n\n");
+	} else {
+		printf("FAILED\n");
+	}
+
+	/* Always print stats for external validation */
+	printf("STATS: received=%d wire=%d coalesced=%d\n",
+	       num_pkt, num_pkt + num_coal, num_coal);
+
+	if (fail_reason)
+		error(1, 0, "capacity test failed %s", fail_reason);
+}
+
 static void gro_sender(void)
 {
+	int bufsize = 4 * 1024 * 1024; /* 4 MB */
 	const int fin_delay_us = 100 * 1000;
 	static char fin_pkt[MAX_HDR_LEN];
 	struct sockaddr_ll daddr = {};
@@ -1066,6 +1312,27 @@ static void gro_sender(void)
 	txfd = socket(PF_PACKET, SOCK_RAW, IPPROTO_RAW);
 	if (txfd < 0)
 		error(1, errno, "socket creation");
+
+	if (setsockopt(txfd, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)))
+		error(1, errno, "cannot set sndbuf size, setsockopt failed");
+
+	/* Enable SO_TXTIME unless test case generates more than one flow
+	 * SO_TXTIME could result in qdisc layer sorting the packets at sender.
+	 */
+	if (strcmp(testname, "single") && strcmp(testname, "capacity")) {
+		struct sock_txtime so_txtime = { .clockid = CLOCK_MONOTONIC, };
+		struct timespec ts;
+
+		if (setsockopt(txfd, SOL_SOCKET, SO_TXTIME,
+			       &so_txtime, sizeof(so_txtime)))
+			error(1, errno, "setsockopt SO_TXTIME");
+
+		if (clock_gettime(CLOCK_MONOTONIC, &ts))
+			error(1, errno, "clock_gettime");
+
+		txtime_ns = ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+		txtime_ns += TXTIME_DELAY_MS * 1000000ULL;
+	}
 
 	memset(&daddr, 0, sizeof(daddr));
 	daddr.sll_ifindex = if_nametoindex(ifname);
@@ -1083,8 +1350,26 @@ static void gro_sender(void)
 	} else if (strcmp(testname, "data_lrg_sml") == 0) {
 		send_data_pkts(txfd, &daddr, PAYLOAD_LEN, PAYLOAD_LEN / 2);
 		write_packet(txfd, fin_pkt, total_hdr_len, &daddr);
+	} else if (strcmp(testname, "data_lrg_1byte") == 0) {
+		send_data_pkts(txfd, &daddr, PAYLOAD_LEN, 1);
+		write_packet(txfd, fin_pkt, total_hdr_len, &daddr);
 	} else if (strcmp(testname, "data_sml_lrg") == 0) {
 		send_data_pkts(txfd, &daddr, PAYLOAD_LEN / 2, PAYLOAD_LEN);
+		write_packet(txfd, fin_pkt, total_hdr_len, &daddr);
+	} else if (strcmp(testname, "data_burst") == 0) {
+		static char buf[MAX_HDR_LEN + PAYLOAD_LEN];
+
+		create_packet(buf, 0, 0, PAYLOAD_LEN, 0);
+		write_packet(txfd, buf, total_hdr_len + PAYLOAD_LEN, &daddr);
+		create_packet(buf, PAYLOAD_LEN, 0, PAYLOAD_LEN, 0);
+		write_packet(txfd, buf, total_hdr_len + PAYLOAD_LEN, &daddr);
+
+		usleep(100 * 1000); /* 100ms */
+		create_packet(buf, PAYLOAD_LEN * 2, 0, PAYLOAD_LEN, 0);
+		write_packet(txfd, buf, total_hdr_len + PAYLOAD_LEN, &daddr);
+		create_packet(buf, PAYLOAD_LEN * 3, 0, PAYLOAD_LEN, 0);
+		write_packet(txfd, buf, total_hdr_len + PAYLOAD_LEN, &daddr);
+
 		write_packet(txfd, fin_pkt, total_hdr_len, &daddr);
 
 	/* ack test */
@@ -1136,6 +1421,10 @@ static void gro_sender(void)
 		write_packet(txfd, fin_pkt, total_hdr_len, &daddr);
 
 	/* ip sub-tests - IPv4 only */
+	} else if (strcmp(testname, "ip_csum") == 0) {
+		send_changed_ip_checksum(txfd, &daddr);
+		usleep(fin_delay_us);
+		write_packet(txfd, fin_pkt, total_hdr_len, &daddr);
 	} else if (strcmp(testname, "ip_ttl") == 0) {
 		send_changed_ttl(txfd, &daddr);
 		write_packet(txfd, fin_pkt, total_hdr_len, &daddr);
@@ -1188,17 +1477,28 @@ static void gro_sender(void)
 
 	/* large sub-tests */
 	} else if (strcmp(testname, "large_max") == 0) {
-		int offset = (proto == PF_INET && !ipip) ? 20 : 0;
-		int remainder = (MAX_PAYLOAD + offset) % MSS;
+		int remainder = max_payload() % calc_mss();
 
 		send_large(txfd, &daddr, remainder);
 		write_packet(txfd, fin_pkt, total_hdr_len, &daddr);
 	} else if (strcmp(testname, "large_rem") == 0) {
-		int offset = (proto == PF_INET && !ipip) ? 20 : 0;
-		int remainder = (MAX_PAYLOAD + offset) % MSS;
+		int remainder = max_payload() % calc_mss();
 
 		send_large(txfd, &daddr, remainder + 1);
 		write_packet(txfd, fin_pkt, total_hdr_len, &daddr);
+
+	/* machinery sub-tests */
+	} else if (strcmp(testname, "single") == 0) {
+		static char buf[MAX_HDR_LEN + PAYLOAD_LEN];
+
+		create_packet(buf, 0, 0, PAYLOAD_LEN, 0);
+		write_packet(txfd, buf, total_hdr_len + PAYLOAD_LEN, &daddr);
+		write_packet(txfd, fin_pkt, total_hdr_len, &daddr);
+	} else if (strcmp(testname, "capacity") == 0) {
+		send_capacity(txfd, &daddr);
+		usleep(fin_delay_us);
+		write_packet(txfd, fin_pkt, total_hdr_len, &daddr);
+
 	} else {
 		error(1, 0, "Unknown testcase: %s", testname);
 	}
@@ -1233,10 +1533,19 @@ static void gro_receiver(void)
 		printf("large data packets followed by a smaller one: ");
 		correct_payload[0] = PAYLOAD_LEN * 1.5;
 		check_recv_pkts(rxfd, correct_payload, 1);
+	} else if (strcmp(testname, "data_lrg_1byte") == 0) {
+		printf("large data packet followed by a 1 byte one: ");
+		correct_payload[0] = PAYLOAD_LEN + 1;
+		check_recv_pkts(rxfd, correct_payload, 1);
 	} else if (strcmp(testname, "data_sml_lrg") == 0) {
 		printf("small data packets followed by a larger one: ");
 		correct_payload[0] = PAYLOAD_LEN / 2;
 		correct_payload[1] = PAYLOAD_LEN;
+		check_recv_pkts(rxfd, correct_payload, 2);
+	} else if (strcmp(testname, "data_burst") == 0) {
+		printf("two bursts of two data packets: ");
+		correct_payload[0] = PAYLOAD_LEN * 2;
+		correct_payload[1] = PAYLOAD_LEN * 2;
 		check_recv_pkts(rxfd, correct_payload, 2);
 
 	/* ack test */
@@ -1312,6 +1621,12 @@ static void gro_receiver(void)
 		check_recv_pkts(rxfd, correct_payload, 2);
 
 	/* ip sub-tests - IPv4 only */
+	} else if (strcmp(testname, "ip_csum") == 0) {
+		correct_payload[0] = PAYLOAD_LEN;
+		correct_payload[1] = PAYLOAD_LEN;
+		correct_payload[2] = PAYLOAD_LEN;
+		printf("bad ip checksum doesn't coalesce: ");
+		check_recv_pkts(rxfd, correct_payload, 3);
 	} else if (strcmp(testname, "ip_ttl") == 0) {
 		correct_payload[0] = PAYLOAD_LEN;
 		correct_payload[1] = PAYLOAD_LEN;
@@ -1377,23 +1692,30 @@ static void gro_receiver(void)
 
 	/* large sub-tests */
 	} else if (strcmp(testname, "large_max") == 0) {
-		int offset = (proto == PF_INET && !ipip) ? 20 : 0;
-		int remainder = (MAX_PAYLOAD + offset) % MSS;
+		int remainder = max_payload() % calc_mss();
 
-		correct_payload[0] = (MAX_PAYLOAD + offset);
+		correct_payload[0] = max_payload();
 		correct_payload[1] = remainder;
 		printf("Shouldn't coalesce if exceed IP max pkt size: ");
 		check_recv_pkts(rxfd, correct_payload, 2);
 	} else if (strcmp(testname, "large_rem") == 0) {
-		int offset = (proto == PF_INET && !ipip) ? 20 : 0;
-		int remainder = (MAX_PAYLOAD + offset) % MSS;
+		int remainder = max_payload() % calc_mss();
 
 		/* last segment sent individually, doesn't start new segment */
-		correct_payload[0] = (MAX_PAYLOAD + offset) - remainder;
+		correct_payload[0] = max_payload() - remainder;
 		correct_payload[1] = remainder + 1;
 		correct_payload[2] = remainder + 1;
 		printf("last segment sent individually: ");
 		check_recv_pkts(rxfd, correct_payload, 3);
+
+	/* machinery sub-tests */
+	} else if (strcmp(testname, "single") == 0) {
+		printf("single data packet: ");
+		correct_payload[0] = PAYLOAD_LEN;
+		check_recv_pkts(rxfd, correct_payload, 1);
+	} else if (strcmp(testname, "capacity") == 0) {
+		check_capacity_pkts(rxfd);
+
 	} else {
 		error(1, 0, "Test case error: unknown testname %s", testname);
 	}
@@ -1411,16 +1733,19 @@ static void parse_args(int argc, char **argv)
 		{ "ipv4", no_argument, NULL, '4' },
 		{ "ipv6", no_argument, NULL, '6' },
 		{ "ipip", no_argument, NULL, 'e' },
+		{ "ip6ip6", no_argument, NULL, 'E' },
+		{ "num-flows", required_argument, NULL, 'n' },
 		{ "rx", no_argument, NULL, 'r' },
 		{ "saddr", required_argument, NULL, 's' },
 		{ "smac", required_argument, NULL, 'S' },
 		{ "test", required_argument, NULL, 't' },
+		{ "order-check", no_argument, NULL, 'o' },
 		{ "verbose", no_argument, NULL, 'v' },
 		{ 0, 0, 0, 0 }
 	};
 	int c;
 
-	while ((c = getopt_long(argc, argv, "46d:D:ei:rs:S:t:v", opts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "46d:D:eEi:n:rs:S:t:ov", opts, NULL)) != -1) {
 		switch (c) {
 		case '4':
 			proto = PF_INET;
@@ -1435,6 +1760,11 @@ static void parse_args(int argc, char **argv)
 			proto = PF_INET;
 			ethhdr_proto = htons(ETH_P_IP);
 			break;
+		case 'E':
+			ip6ip6 = true;
+			proto = PF_INET6;
+			ethhdr_proto = htons(ETH_P_IPV6);
+			break;
 		case 'd':
 			addr4_dst = addr6_dst = optarg;
 			break;
@@ -1443,6 +1773,9 @@ static void parse_args(int argc, char **argv)
 			break;
 		case 'i':
 			ifname = optarg;
+			break;
+		case 'n':
+			num_flows = atoi(optarg);
 			break;
 		case 'r':
 			tx_socket = false;
@@ -1455,6 +1788,9 @@ static void parse_args(int argc, char **argv)
 			break;
 		case 't':
 			testname = optarg;
+			break;
+		case 'o':
+			order_check = true;
 			break;
 		case 'v':
 			verbose = true;
@@ -1473,12 +1809,15 @@ int main(int argc, char **argv)
 	if (ipip) {
 		tcp_offset = ETH_HLEN + sizeof(struct iphdr) * 2;
 		total_hdr_len = tcp_offset + sizeof(struct tcphdr);
+	} else if (ip6ip6) {
+		tcp_offset = ETH_HLEN + sizeof(struct ipv6hdr) * 2;
+		total_hdr_len = tcp_offset + sizeof(struct tcphdr);
 	} else if (proto == PF_INET) {
 		tcp_offset = ETH_HLEN + sizeof(struct iphdr);
 		total_hdr_len = tcp_offset + sizeof(struct tcphdr);
 	} else if (proto == PF_INET6) {
 		tcp_offset = ETH_HLEN + sizeof(struct ipv6hdr);
-		total_hdr_len = MAX_HDR_LEN;
+		total_hdr_len = tcp_offset + sizeof(struct tcphdr);
 	} else {
 		error(1, 0, "Protocol family is not ipv4 or ipv6");
 	}
