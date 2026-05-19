@@ -26,7 +26,7 @@ if [ -n "$freepgs" ] && [ $freepgs -lt $hpages_test ]; then
 	nr_hugepgs=`cat /proc/sys/vm/nr_hugepages`
 	hpages_needed=`expr $hpages_test - $freepgs`
 
-	if [ "$(id -u)" -ne 0 ]; then
+	if [ $UID != 0 ]; then
 		echo "Please run memfd with hugetlbfs test as root"
 		exit $ksft_skip
 	fi
