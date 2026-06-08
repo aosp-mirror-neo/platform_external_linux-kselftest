@@ -4,7 +4,7 @@
 # Kselftest framework requirement - SKIP code is 4.
 ksft_skip=4
 
-if [ $UID != 0 ]; then
+if [ "$(id -u)" -ne 0 ]; then
 	echo "Please run ir_loopback test as root [SKIP]"
 	exit $ksft_skip
 fi

@@ -116,7 +116,7 @@ _mkfs_mount_test()
 _check_root() {
 	local ksft_skip=4
 
-	if [ $UID != 0 ]; then
+	if [ "$(id -u)" -ne 0 ]; then
 		echo please run this as root >&2
 		exit $ksft_skip
 	fi

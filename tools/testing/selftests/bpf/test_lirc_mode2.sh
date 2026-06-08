@@ -6,7 +6,7 @@ ksft_skip=4
 ret=$ksft_skip
 
 msg="skip all tests:"
-if [ $UID != 0 ]; then
+if [ "$(id -u)" -ne 0 ]; then
 	echo $msg please run this as root >&2
 	exit $ksft_skip
 fi

@@ -41,7 +41,7 @@ prerequisite()
 {
 	msg="skip all tests:"
 
-	if [ $UID != 0 ]; then
+	if [ "$(id -u)" -ne 0 ]; then
 		ktap_skip_all "$msg must be run as root"
 		exit "${KSFT_SKIP}"
 	fi
