@@ -13,7 +13,7 @@ XSKOBJ=xskxceiver
 validate_root_exec()
 {
 	msg="skip all tests:"
-	if [ $UID != 0 ]; then
+	if [ "$(id -u)" -ne 0 ]; then
 		echo $msg must be run as root >&2
 		test_exit $ksft_fail
 	else
