@@ -32,7 +32,7 @@ echo "Running USB over IP Testing on $busid";
 
 test_end_msg="End of USB over IP Testing on $busid"
 
-if [ $UID != 0 ]; then
+if [ "$(id -u)" -ne 0 ]; then
 	echo "Please run usbip_test as root [SKIP]"
 	echo $test_end_msg
 	exit $ksft_skip

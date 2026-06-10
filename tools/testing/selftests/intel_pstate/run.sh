@@ -39,7 +39,7 @@ if ! uname -m | sed -e s/i.86/x86/ -e s/x86_64/x86/ | grep -q x86; then
 fi
 
 msg="skip all tests:"
-if [ $UID != 0 ] && [ $EVALUATE_ONLY == 0 ]; then
+if [ "$(id -u)" -ne 0 ] && [ $EVALUATE_ONLY == 0 ]; then
     echo $msg please run this as root >&2
     exit $ksft_skip
 fi
