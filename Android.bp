@@ -1558,6 +1558,7 @@ cc_library_static {
     name: "kselftest_vm_util",
     srcs: [
         "tools/testing/selftests/mm/vm_util.c",
+        "tools/testing/selftests/mm/thp_settings.c",
     ],
     export_include_dirs: [
         "tools/testing/selftests/mm",
