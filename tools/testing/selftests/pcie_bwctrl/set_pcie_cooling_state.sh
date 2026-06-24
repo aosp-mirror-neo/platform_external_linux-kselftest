@@ -13,7 +13,7 @@ prerequisite()
 {
 	local ports
 
-	if [ "$(id -u)" -ne 0 ]; then
+	if [ $UID != 0 ]; then
 		echo $skipmsg must be run as root >&2
 		exit $ksft_skip
 	fi
