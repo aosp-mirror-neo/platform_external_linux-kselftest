@@ -87,6 +87,7 @@ sh_test {
         ":kselftest_futex_futex_lock_pi_exiting",
         ":kselftest_futex_functional_run.sh",
         ":kselftest_kcmp_tests_kcmp_test",
+        ":kselftest_memfd_test",
         ":kselftest_net_tests_socket",
         ":kselftest_net_tests_psock_fanout",
         ":kselftest_net_tests_psock_tpacket",
@@ -95,6 +96,7 @@ sh_test {
         ":kselftest_net_test_bpf",
         ":kselftest_ptrace_tests_peeksiginfo",
         ":kselftest_rtc_tests_rtctest",
+        ":kselftest_seccomp_seccomp_bpf",
         ":kselftest_size_test_get_size",
         ":kselftest_splice_test_default_file_splice_read",
         ":kselftest_splice_default_file_splice_read.sh",
@@ -160,6 +162,7 @@ sh_test {
         ":kselftest_futex_futex_lock_pi_exiting",
         ":kselftest_futex_functional_run.sh",
         ":kselftest_kcmp_tests_kcmp_test",
+        ":kselftest_memfd_test",
         ":kselftest_net_tests_socket",
         ":kselftest_net_tests_psock_fanout",
         ":kselftest_net_tests_psock_tpacket",
@@ -168,6 +171,7 @@ sh_test {
         ":kselftest_net_test_bpf",
         ":kselftest_ptrace_tests_peeksiginfo",
         ":kselftest_rtc_tests_rtctest",
+        ":kselftest_seccomp_seccomp_bpf",
         ":kselftest_size_test_get_size",
         ":kselftest_splice_test_default_file_splice_read",
         ":kselftest_splice_default_file_splice_read.sh",
@@ -233,6 +237,7 @@ sh_test {
         ":kselftest_futex_futex_lock_pi_exiting",
         ":kselftest_futex_functional_run.sh",
         ":kselftest_kcmp_tests_kcmp_test",
+        ":kselftest_memfd_test",
         ":kselftest_net_tests_socket",
         ":kselftest_net_tests_psock_fanout",
         ":kselftest_net_tests_psock_tpacket",
@@ -241,6 +246,7 @@ sh_test {
         ":kselftest_net_test_bpf",
         ":kselftest_ptrace_tests_peeksiginfo",
         ":kselftest_rtc_tests_rtctest",
+        ":kselftest_seccomp_seccomp_bpf",
         ":kselftest_size_test_get_size",
         ":kselftest_splice_test_default_file_splice_read",
         ":kselftest_splice_default_file_splice_read.sh",
@@ -309,6 +315,7 @@ sh_test {
         ":kselftest_futex_futex_lock_pi_exiting",
         ":kselftest_futex_functional_run.sh",
         ":kselftest_kcmp_tests_kcmp_test",
+        ":kselftest_memfd_test",
         ":kselftest_net_tests_socket",
         ":kselftest_net_tests_psock_fanout",
         ":kselftest_net_tests_psock_tpacket",
@@ -316,6 +323,7 @@ sh_test {
         ":kselftest_net_tests_reuseaddr_conflict",
         ":kselftest_net_test_bpf",
         ":kselftest_rtc_tests_rtctest",
+        ":kselftest_seccomp_seccomp_bpf",
         ":kselftest_size_test_get_size",
         ":kselftest_splice_test_default_file_splice_read",
         ":kselftest_splice_default_file_splice_read.sh",
@@ -379,8 +387,8 @@ sh_test {
     data: [
         ":kselftest_capabilities_test_execve",
         ":kselftest_capabilities_validate_cap",
-        ":kselftest_futex_futex_requeue_pi_mismatched_ops",
         ":kselftest_kcmp_tests_kcmp_test",
+        ":kselftest_memfd_test",
         ":kselftest_net_tests_socket",
         ":kselftest_net_tests_psock_fanout",
         ":kselftest_net_tests_psock_tpacket",
@@ -389,6 +397,7 @@ sh_test {
         ":kselftest_net_test_bpf",
         ":kselftest_ptrace_tests_peeksiginfo",
         ":kselftest_rtc_tests_rtctest",
+        ":kselftest_seccomp_seccomp_bpf",
         ":kselftest_size_test_get_size",
         ":kselftest_splice_test_default_file_splice_read",
         ":kselftest_splice_default_file_splice_read.sh",
@@ -1092,6 +1101,24 @@ cc_test {
     defaults: ["kselftest_defaults"],
 }
 
+// Memfd test
+cc_test {
+    name: "kselftest_memfd_test",
+    stem: "memfd_test",
+    relative_install_path: "vts_linux_kselftest/memfd",
+    srcs: [
+        "tools/testing/selftests/memfd/memfd_test.c",
+        "tools/testing/selftests/memfd/common.c",
+    ],
+    local_include_dirs: [
+        "tools/testing/selftests/memfd",
+    ],
+    cflags: [
+        "-D_FILE_OFFSET_BITS=64",
+    ],
+    defaults: ["kselftest_template_defaults"],
+}
+
 // Memory-hotplug test
 sh_test {
     name: "kselftest_memory-hotplug_mem-on-off-test",
@@ -1229,6 +1256,26 @@ cc_test {
     stem: "rtctest",
     relative_install_path: "vts_linux_kselftest/rtc",
     srcs: ["tools/testing/selftests/rtc/rtctest.c"],
+    defaults: ["kselftest_template_defaults"],
+}
+
+// Seccomp test
+cc_test {
+    name: "kselftest_seccomp_seccomp_bpf",
+    stem: "seccomp_bpf",
+    relative_install_path: "vts_linux_kselftest/seccomp",
+    srcs: [
+        "tools/testing/selftests/seccomp/seccomp_bpf.c",
+    ],
+    local_include_dirs: [
+        "tools/testing/selftests/seccomp",
+        "tools/testing/selftests",
+    ],
+    cflags: [
+        "-Wno-unused-function",
+        "-D__GLIBC_PREREQ(a,b)=1",
+    ],
+    static_libs: ["libcap"],
     defaults: ["kselftest_template_defaults"],
 }
 
