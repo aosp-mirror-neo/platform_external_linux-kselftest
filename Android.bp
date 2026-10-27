@@ -403,6 +403,8 @@ sh_test {
         ":kselftest_timer_tests_valid-adjtimex",
         ":kselftest_cpu-hotplug_cpu-on-off-test",
         ":kselftest_vdso_test_abi",
+        ":kselftest_vdso_test_getcpu",
+        ":kselftest_vdso_test_gettimeofday",
     ],
     enabled: false,
     arch: {
