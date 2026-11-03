@@ -1787,6 +1787,9 @@ cc_test {
     srcs: [
         "tools/testing/selftests/mm/uffd-unit-tests.c",
     ],
+    // v7.3 userfaultfd RWP UAPI is missing from bionic's kernel headers.
+    // TODO(b/578943197): Drop once bionic ships v7.3 kernel headers.
+    cflags: ["-include uffd-compat.h"],
     defaults: ["kselftest_template_defaults"],
     static_libs: [
         "libcap",
