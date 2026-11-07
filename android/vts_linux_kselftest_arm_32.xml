@@ -49,6 +49,7 @@
         <option name="test-command-line" key="timers_raw_skew_arm_32" value="cd &ktest_dir;/*/.; ./raw_skew 30" />
         <option name="test-command-line" key="mm_mremap_dontunmap_arm_32" value="cd &ktest_dir;/*/.; ./mremap_dontunmap" />
         <option name="test-command-line" key="memfd_test_arm_32" value="cd &ktest_dir;/*/.; ./memfd_test" />
+        <option name="min-kernel-version" key="memfd_test_arm_32" value="6.6" />
     </test>
 
     <!-- Skippable tests (hardware-dependent or non-mandatory; exit 4 / KSFT_SKIP is treated as IGNORED) -->
@@ -66,5 +67,6 @@
         <option name="test-command-line" key="timers_valid_adjtimex_arm_32" value="cd &ktest_dir;/*/.; ./valid-adjtimex" />
         <option name="test-command-line" key="mm_uffd_unit_tests_arm_32" value="cd &ktest_dir;/*/.; ./uffd-unit-tests" />
         <option name="test-command-line" key="seccomp_bpf_arm_32" value="cd &ktest_dir;/*/.; ./seccomp_bpf" />
+        <option name="min-kernel-version" key="seccomp_bpf_arm_32" value="6.12" />
     </test>
 </configuration>

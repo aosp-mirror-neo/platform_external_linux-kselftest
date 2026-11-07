@@ -286,10 +286,14 @@ ALL_TEST_CASES = [
     TestCase(
         'memfd_test',
         'cd &ktest_dir;/*/.; ./memfd_test',
+        # Tests MFD_EXEC / MFD_NOEXEC_SEAL added in 6.3 (b/582542744).
+        min_kernel_version='6.6',
     ),
     TestCase(
         'seccomp_bpf',
         'cd &ktest_dir;/*/.; ./seccomp_bpf',
+        # Tests user_ioctl_notification_filter_empty added in 6.11 (b/582542744).
+        min_kernel_version='6.12',
     ),
     # x86-specific tests
     TestCase(

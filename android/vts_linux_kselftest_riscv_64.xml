@@ -49,6 +49,7 @@
         <option name="test-command-line" key="vDSO_kselftest_vdso_test_abi_riscv_64" value="cd &ktest_dir;/*/.; ./kselftest_vdso_test_abi" />
         <option name="test-command-line" key="vDSO_kselftest_vdso_test_gettimeofday_riscv_64" value="cd &ktest_dir;/*/.; ./kselftest_vdso_test_gettimeofday" />
         <option name="test-command-line" key="memfd_test_riscv_64" value="cd &ktest_dir;/*/.; ./memfd_test" />
+        <option name="min-kernel-version" key="memfd_test_riscv_64" value="6.6" />
     </test>
 
     <!-- Skippable tests (hardware-dependent or non-mandatory; exit 4 / KSFT_SKIP is treated as IGNORED) -->
@@ -66,5 +67,6 @@
         <option name="test-command-line" key="timers_valid_adjtimex_riscv_64" value="cd &ktest_dir;/*/.; ./valid-adjtimex" />
         <option name="test-command-line" key="vDSO_kselftest_vdso_test_getcpu_riscv_64" value="cd &ktest_dir;/*/.; ./kselftest_vdso_test_getcpu" />
         <option name="test-command-line" key="seccomp_bpf_riscv_64" value="cd &ktest_dir;/*/.; ./seccomp_bpf" />
+        <option name="min-kernel-version" key="seccomp_bpf_riscv_64" value="6.12" />
     </test>
 </configuration>
