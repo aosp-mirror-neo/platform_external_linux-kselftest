@@ -49,6 +49,7 @@
         <option name="test-command-line" key="timers_raw_skew_x86_32" value="cd &ktest_dir;/*/.; ./raw_skew 30" />
         <option name="test-command-line" key="mm_mremap_dontunmap_x86_32" value="cd &ktest_dir;/*/.; ./mremap_dontunmap" />
         <option name="test-command-line" key="memfd_test_x86_32" value="cd &ktest_dir;/*/.; ./memfd_test" />
+        <option name="min-kernel-version" key="memfd_test_x86_32" value="6.6" />
         <option name="test-command-line" key="x86_single_step_syscall_x86_32" value="cd &ktest_dir;/*/.; ./single_step_syscall" />
         <option name="min-kernel-version" key="x86_single_step_syscall_x86_32" value="5.15" />
         <option name="test-command-line" key="x86_sysret_ss_attrs_x86_32" value="cd &ktest_dir;/*/.; ./sysret_ss_attrs" />
@@ -81,5 +82,6 @@
         <option name="test-command-line" key="timers_valid_adjtimex_x86_32" value="cd &ktest_dir;/*/.; ./valid-adjtimex" />
         <option name="test-command-line" key="mm_uffd_unit_tests_x86_32" value="cd &ktest_dir;/*/.; ./uffd-unit-tests" />
         <option name="test-command-line" key="seccomp_bpf_x86_32" value="cd &ktest_dir;/*/.; ./seccomp_bpf" />
+        <option name="min-kernel-version" key="seccomp_bpf_x86_32" value="6.12" />
     </test>
 </configuration>
