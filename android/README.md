@@ -35,7 +35,7 @@ android/
    Tests that are known broken or flaky are centrally tracked in `DISABLED_TESTS` with an explicit Buganizer Bug ID and rationale. Disabled tests are completely omitted from the generated XMLs. A disabled test must not also be listed in `MANDATORY_TESTS`; the unit tests enforce this.
 
 4. **CI Drift Detection (`gen_kselftest_config.py --check`)**:
-   Enforces that checked-in XML files (`vts_linux_kselftest_<arch>.xml`) strictly match the Python configuration files.
+   Enforces that checked-in XML files (`vts_linux_kselftest_<arch>.xml`) strictly match the Python configuration files. The `gen_kselftest_config_test` host test runs the same check and is listed in the `presubmit` group of `TEST_MAPPING`, so a change that edits `configs/` without regenerating the XMLs, or edits an XML by hand, fails presubmit.
 
 ---
 
@@ -129,4 +129,9 @@ Returns exit code 0 if all XML files match their configurations, or non-zero if 
 ### Run Unit Tests
 ```bash
 python3 -m unittest discover -s android/tests -v
+```
+
+In an Android tree, the same tests run as the `gen_kselftest_config_test` host test:
+```bash
+atest gen_kselftest_config_test
 ```

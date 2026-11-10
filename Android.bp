@@ -424,6 +424,32 @@ sh_test {
     test_config_template: "android/vts_linux_kselftest_riscv_64.xml",
 }
 
+python_test_host {
+    name: "gen_kselftest_config_test",
+    main: "android/tests/test_gen_kselftest_config.py",
+    srcs: [
+        "android/configs/*.py",
+        "android/gen_kselftest_config.py",
+        "android/tests/*.py",
+    ],
+    data: [
+        "android/templates/vts_linux_kselftest.xml.template",
+        "android/vts_linux_kselftest_*.xml",
+    ],
+    // Run from extracted files so that the test can read the template and
+    // the checked-in XML configs through regular file paths.
+    embedded_launcher: false,
+    // Not a host unit test: host-unit-tests loads every .xml file in the
+    // test directory as a Tradefed config and does not allow the
+    // PushFilePreparer used by the VTS configs above. The presubmit group
+    // of TEST_MAPPING runs this test instead. python_test_host defaults
+    // unit_test to true, so turn it off explicitly.
+    test_options: {
+        unit_test: false,
+    },
+    test_suites: ["general-tests"],
+}
+
 filegroup {
     name: "kselftest_template",
     srcs: [

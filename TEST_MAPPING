@@ -1,4 +1,10 @@
 {
+  "presubmit": [
+    {
+      "name": "gen_kselftest_config_test",
+      "host": true
+    }
+  ],
   "kernel-presubmit": [
     {
       "name": "vts_linux_kselftest_arm_32"
