@@ -91,6 +91,42 @@ def generate_xml_content(arch_key: str, template: str) -> str:
   )
 
 
+def xml_filename(arch_key: str) -> str:
+  """Returns the file name of the checked-in XML for the architecture key."""
+  return f"vts_linux_kselftest_{arch_key}.xml"
+
+
+def diff_against_generated(
+    arch_key: str, template: str, xml_path: str
+) -> list[str]:
+  """Compares an XML file on disk with the generator output.
+
+  Args:
+    arch_key: Architecture key in SUPPORTED_ARCHES.
+    template: Content of the XML template.
+    xml_path: Path of the XML file to compare.
+
+  Returns:
+    Unified diff lines from the file on disk to the generator output, or an
+    empty list if the file is up to date.
+  """
+  with open(xml_path, "r", encoding="utf-8") as f:
+    current = f.read()
+  generated = generate_xml_content(arch_key, template)
+  if current == generated:
+    return []
+
+  name = os.path.basename(xml_path)
+  return list(
+      difflib.unified_diff(
+          current.splitlines(keepends=True),
+          generated.splitlines(keepends=True),
+          fromfile=f"{name} (on disk)",
+          tofile=f"{name} (generated)",
+      )
+  )
+
+
 def parse_args():
   parser = argparse.ArgumentParser(
       description="Generate or check kselftest VTS Tradefed configs."
@@ -135,9 +171,8 @@ def main():
   has_diff = False
 
   for arch_key in arches:
-    xml_filename = f"vts_linux_kselftest_{arch_key}.xml"
-    xml_path = os.path.join(args.out_dir, xml_filename)
-    generated = generate_xml_content(arch_key, template)
+    filename = xml_filename(arch_key)
+    xml_path = os.path.join(args.out_dir, filename)
 
     if args.check:
       if not os.path.exists(xml_path):
@@ -145,25 +180,18 @@ def main():
         has_diff = True
         continue
 
-      with open(xml_path, "r", encoding="utf-8") as f:
-        current = f.read()
-
-      if current != generated:
+      diff = diff_against_generated(arch_key, template, xml_path)
+      if diff:
         print(
-            f"[CHECK FAILED] Config out of sync for {xml_filename}:",
+            f"[CHECK FAILED] Config out of sync for {filename}:",
             file=sys.stderr,
-        )
-        diff = difflib.unified_diff(
-            current.splitlines(keepends=True),
-            generated.splitlines(keepends=True),
-            fromfile=f"{xml_filename} (on disk)",
-            tofile=f"{xml_filename} (generated)",
         )
         sys.stderr.writelines(diff)
         has_diff = True
       else:
-        print(f"[CHECK OK] {xml_filename} is up to date.")
+        print(f"[CHECK OK] {filename} is up to date.")
     else:
+      generated = generate_xml_content(arch_key, template)
       os.makedirs(os.path.dirname(os.path.abspath(xml_path)), exist_ok=True)
       with open(xml_path, "w", encoding="utf-8") as f:
         f.write(generated)
