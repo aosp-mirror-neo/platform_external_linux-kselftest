@@ -135,6 +135,27 @@ class GenKselftestConfigTest(unittest.TestCase):
             self.assertIsNotNone(futex_min_ver, f"min-kernel-version missing for futex on {arch}")
             self.assertEqual(futex_min_ver.get("value"), "5.1")
 
+    def test_checked_in_xml_matches_generated(self):
+        """Checked-in XMLs must match the generator output, same as --check."""
+        for arch in gen_kselftest_config.SUPPORTED_ARCHES:
+            with self.subTest(arch=arch):
+                xml_path = os.path.join(
+                    gen_kselftest_config.SCRIPT_DIR,
+                    gen_kselftest_config.xml_filename(arch),
+                )
+                self.assertTrue(os.path.isfile(xml_path), f"Missing {xml_path}")
+                diff = gen_kselftest_config.diff_against_generated(
+                    arch, self.template, xml_path
+                )
+                if diff:
+                    self.fail(
+                        f"{os.path.basename(xml_path)} is out of sync with"
+                        " android/configs/. Run 'python3"
+                        " android/gen_kselftest_config.py' to regenerate it.\n"
+                        + "".join(diff)
+                    )
+
 
 if __name__ == "__main__":
-    unittest.main()
+    # Tradefed parses one result line per test, which needs verbosity=2.
+    unittest.main(verbosity=2)
