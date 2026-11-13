@@ -424,18 +424,30 @@ sh_test {
     test_config_template: "android/vts_linux_kselftest_riscv_64.xml",
 }
 
-python_test_host {
-    name: "gen_kselftest_config_test",
-    main: "android/tests/test_gen_kselftest_config.py",
+filegroup {
+    name: "gen_kselftest_config_srcs",
+    path: "android",
     srcs: [
         "android/configs/*.py",
         "android/gen_kselftest_config.py",
         "android/tests/*.py",
     ],
-    data: [
+}
+
+filegroup {
+    name: "gen_kselftest_config_data",
+    path: "android",
+    srcs: [
         "android/templates/vts_linux_kselftest.xml.template",
         "android/vts_linux_kselftest_*.xml",
     ],
+}
+
+python_test_host {
+    name: "gen_kselftest_config_test",
+    main: "tests/test_gen_kselftest_config.py",
+    srcs: [":gen_kselftest_config_srcs"],
+    data: [":gen_kselftest_config_data"],
     // Run from extracted files so that the test can read the template and
     // the checked-in XML configs through regular file paths.
     embedded_launcher: false,
