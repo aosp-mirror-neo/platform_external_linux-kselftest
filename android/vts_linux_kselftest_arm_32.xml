@@ -66,7 +66,7 @@
         <option name="test-command-line" key="timers_threadtest_arm_32" value="cd &ktest_dir;/*/.; ./threadtest" />
         <option name="test-command-line" key="timers_valid_adjtimex_arm_32" value="cd &ktest_dir;/*/.; ./valid-adjtimex" />
         <option name="test-command-line" key="mm_uffd_unit_tests_arm_32" value="cd &ktest_dir;/*/.; ./uffd-unit-tests" />
-        <option name="test-command-line" key="seccomp_bpf_arm_32" value="cd &ktest_dir;/*/.; ./seccomp_bpf" />
+        <option name="test-command-line" key="seccomp_bpf_arm_32" value="cd &ktest_dir;/*/.; ./seccomp_bpf -T user_notification_wait_killable_after_reply" />
         <option name="min-kernel-version" key="seccomp_bpf_arm_32" value="6.12" />
     </test>
 </configuration>
