@@ -291,8 +291,11 @@ ALL_TEST_CASES = [
     ),
     TestCase(
         'seccomp_bpf',
-        'cd &ktest_dir;/*/.; ./seccomp_bpf',
+        'cd &ktest_dir;/*/.; ./seccomp_bpf -T user_notification_wait_killable_after_reply',
         # Tests user_ioctl_notification_filter_empty added in 6.11 (b/582542744).
+        # Exclude user_notification_wait_killable_after_reply which runs 100k
+        # IPC/seccomp-notif iterations and exceeds the 30s harness timeout on
+        # mobile devices (b/586384388).
         min_kernel_version='6.12',
     ),
     # x86-specific tests
